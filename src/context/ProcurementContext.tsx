@@ -50,8 +50,8 @@ const initialState: PurchaseRequest[] = [
   {
     id: 'PR-2025-009', branch: 'Bur Dubai', department: 'Pediatrics', category: 'Consumables',
     itemName: 'Pediatric Oxygen Mask', quantity: 150, requester: 'Dr. Nora', priority: 'Normal',
-    status: 'PO Issued', createdAt: now - (10 * hour), slaDeadline: now + (38 * hour), smdApproved: true,
-    vendor: 'MedLine Gulf', price: 4500.00, paymentMode: 'On Delivery',
+    status: 'Order Placed', createdAt: now - (10 * hour), slaDeadline: now + (38 * hour), smdApproved: true,
+    vendor: 'MedLine Gulf', price: 4500.00, paymentMode: 'On Delivery', deliveryLocation: 'Sub Store',
     history: [
       { id: 'h18a', stage: 'Initiation', action: 'Raised PR', timestamp: now - (10 * hour), userRole: 'Sub Store Keeper' },
       { id: 'h18b', stage: 'Finance', action: 'Clearance Issued', timestamp: now - (2 * hour), userRole: 'Finance' }

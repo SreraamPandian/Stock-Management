@@ -9,15 +9,20 @@ import { AdminView } from './components/views/AdminView';
 import { StoreManagementView } from './components/views/StoreManagementView';
 import { UserManagementView } from './components/views/UserManagementView';
 import { LoginPage } from './components/auth/LoginPage';
+import { ApprovalQueueView } from './components/views/ApprovalQueueView';
+import { PurchaseOrderView } from './components/views/PurchaseOrderView';
 
 const AppContent = () => {
-  const { activeTab, setActiveTab } = useProcurement();
+  const { activeTab, setActiveTab, role } = useProcurement();
 
   const renderContent = () => {
     switch (activeTab) {
       case 'Dashboard':
         return <Dashboard />;
       case 'PR Entry':
+        if (role === 'SMD' || role === 'Finance') {
+          return <ApprovalQueueView />;
+        }
         return (
           <div className="p-8 max-w-7xl mx-auto">
             <div className="flex justify-between items-center mb-8">
@@ -90,6 +95,8 @@ const AppContent = () => {
         return <StoreManagementView />;
       case 'User Management':
         return <UserManagementView />;
+      case 'Purchase Order':
+        return <PurchaseOrderView />;
       default:
         return <Dashboard />;
     }

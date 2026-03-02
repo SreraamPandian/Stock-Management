@@ -16,14 +16,18 @@ export type PRStatus =
   | 'Pending - SMD'
   | 'Pending - Finance'
   | 'PO Issued'
+  | 'Order Placed'
   | 'Dispatch Scheduled'
   | 'Dispatched'
   | 'In Transit'
+  | 'GRN Pending'
+  | 'GRN Completed'
   | 'Delivered'
   | 'Closed - Completed'
   | 'Rejected - Action Required';
 
-export type Tab = 'Dashboard' | 'PR Entry' | 'Stock' | 'Analytics' | 'Admin' | 'Store Management' | 'User Management';
+export type Tab = 'Dashboard' | 'PR Entry' | 'Stock' | 'Analytics' | 'Admin' | 'Store Management' | 'User Management' | 'Purchase Order';
+
 
 export interface Store {
   id: string;

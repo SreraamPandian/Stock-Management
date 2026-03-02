@@ -151,6 +151,75 @@ export const PRDetailModal = ({ pr, onClose }: Props) => {
       );
     }
 
+    const canDoGRN = (role === 'Sub Store Keeper' && pr.deliveryLocation !== 'Central Store') || (role === 'Central Store' && pr.deliveryLocation === 'Central Store');
+    if (canDoGRN && ['PO Issued', 'Order Placed', 'GRN Pending', 'Dispatched', 'In Transit'].includes(pr.status)) {
+      return (
+        <div className="w-full space-y-6 bg-blue-50/50 p-6 rounded-2xl border border-blue-100 mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center gap-2 text-blue-800 font-black text-xs uppercase tracking-widest">
+              <Check className="w-5 h-5" /> GRN Reconciliation Center
+            </div>
+            <div className="px-3 py-1 bg-white border border-blue-200 rounded-full text-[10px] font-black text-blue-600 uppercase">
+              PO Qty: {pr.quantity}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-6">
+            <div className="bg-white p-4 rounded-xl border border-blue-100 space-y-4">
+              <div>
+                <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Receipt Quantity</label>
+                <input
+                  type="number"
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                  value={extraFormData.receivedQty}
+                  onChange={e => setExtraFormData({ ...extraFormData, receivedQty: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Discrepancy Remarks</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 5 units damaged"
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500"
+                  value={remarks}
+                  onChange={e => setRemarks(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="bg-white p-4 rounded-xl border border-blue-100 space-y-4">
+              <div>
+                <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Expiry Date Verification</label>
+                <input type="date" className="w-full border border-slate-200 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500" id="grn-expiry" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Stock Location</label>
+                <select className="w-full border border-slate-200 rounded-lg p-2.5 text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500">
+                  <option>{pr.branch} {role === 'Central Store' ? 'Central Store' : 'Sub Store'} - Main Rack</option>
+                  <option>{pr.branch} {role === 'Central Store' ? 'Central Store' : 'Sub Store'} - Cold Storage</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-5 rounded-2xl border-2 border-dashed border-blue-200 shadow-sm text-center">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Scan Barcode to Authenticate & Finalize GRN</p>
+            <BarcodeScanner onScan={(code) => {
+              const expiry = (document.getElementById('grn-expiry') as HTMLInputElement)?.value;
+              handleAction('GRN Completed', {
+                actualDeliveryDate: Date.now(),
+                receivedQuantity: parseInt(extraFormData.receivedQty),
+                discrepancyRemarks: remarks,
+                barcode: code,
+                expiryDate: expiry,
+                notes: `GRN Finalized: ${extraFormData.receivedQty}/${pr.quantity} items receipted. Expiry: ${expiry || 'N/A'}. Discrepancy: ${remarks || 'None'}. Forwarded for workflow closure.`
+              });
+            }} />
+          </div>
+        </div>
+      );
+    }
+
     switch (role) {
       case 'Sub Store Keeper':
         if (pr.status === 'Rejected - Action Required') {
@@ -220,73 +289,7 @@ export const PRDetailModal = ({ pr, onClose }: Props) => {
             </div>
           );
         }
-        if (pr.status === 'PO Issued' || pr.status === 'Dispatched' || pr.status === 'In Transit') {
-          return (
-            <div className="w-full space-y-6 bg-blue-50/50 p-6 rounded-2xl border border-blue-100">
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center gap-2 text-blue-800 font-black text-xs uppercase tracking-widest">
-                  <Check className="w-5 h-5" /> GRN Reconciliation Center
-                </div>
-                <div className="px-3 py-1 bg-white border border-blue-200 rounded-full text-[10px] font-black text-blue-600 uppercase">
-                  PO Qty: {pr.quantity}
-                </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-6">
-                <div className="bg-white p-4 rounded-xl border border-blue-100 space-y-4">
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Receipt Quantity</label>
-                    <input
-                      type="number"
-                      className="w-full border border-slate-200 rounded-lg p-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500"
-                      value={extraFormData.receivedQty}
-                      onChange={e => setExtraFormData({ ...extraFormData, receivedQty: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Discrepancy Remarks</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 5 units damaged"
-                      className="w-full border border-slate-200 rounded-lg p-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500"
-                      value={remarks}
-                      onChange={e => setRemarks(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="bg-white p-4 rounded-xl border border-blue-100 space-y-4">
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Expiry Date Verification</label>
-                    <input type="date" className="w-full border border-slate-200 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500" id="grn-expiry" />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Stock Location</label>
-                    <select className="w-full border border-slate-200 rounded-lg p-2.5 text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500">
-                      <option>{pr.branch} Sub Store - Main Rack</option>
-                      <option>{pr.branch} Sub Store - Cold Storage</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white p-5 rounded-2xl border-2 border-dashed border-blue-200 shadow-sm text-center">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Scan Barcode to Authenticate & Finalize GRN</p>
-                <BarcodeScanner onScan={(code) => {
-                  const expiry = (document.getElementById('grn-expiry') as HTMLInputElement)?.value;
-                  handleAction('Closed - Completed', {
-                    actualDeliveryDate: Date.now(),
-                    receivedQuantity: parseInt(extraFormData.receivedQty),
-                    discrepancyRemarks: remarks,
-                    barcode: code,
-                    expiryDate: expiry,
-                    notes: `GRN Finalized: ${extraFormData.receivedQty}/${pr.quantity} items receipted. Expiry: ${expiry || 'N/A'}. Discrepancy: ${remarks || 'None'}`
-                  });
-                }} />
-              </div>
-            </div>
-          );
-        }
         return null;
 
       case 'Centre In-Charge':

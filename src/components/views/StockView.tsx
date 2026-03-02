@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Package, Search, ExternalLink, Box } from 'lucide-react';
 import { StockDetailModal } from './StockDetailModal';
+import { useProcurement } from '../../context/ProcurementContext';
 
 const mockInventory = [
   { id: 'ITM-001', name: 'Surgical Masks (Box of 50)', category: 'Consumables', burDubai: 1200, alQuoz: 850, central: 5000, status: 'In Stock' },
@@ -20,15 +21,23 @@ const mockInventory = [
 ];
 
 export const StockView = () => {
+  const { role, branch } = useProcurement();
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [selectedItem, setSelectedItem] = useState<typeof mockInventory[0] | null>(null);
+
+  const isGlobal = ['Super Admin', 'Central Store', 'Procurement Officer', 'SMD', 'Finance'].includes(role);
 
   const filteredInventory = mockInventory.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase()) ||
       item.id.toLowerCase().includes(search.toLowerCase());
     const matchesCategory = categoryFilter === 'All' || item.category === categoryFilter;
-    return matchesSearch && matchesCategory;
+
+    // For branch roles, only show items that have >0 stock in their branch (or just show all but hide other branch columns)
+    const matchesLocation = isGlobal ||
+      (branch === 'Bur Dubai' ? item.burDubai >= 0 : item.alQuoz >= 0);
+
+    return matchesSearch && matchesCategory && matchesLocation;
   });
 
   return (
@@ -79,9 +88,9 @@ export const StockView = () => {
               <tr className="bg-slate-50/80 border-b border-slate-100 text-[10px] uppercase font-black tracking-widest text-slate-400">
                 <th className="p-5">Material Description</th>
                 <th className="p-5">Category</th>
-                <th className="p-5 text-center bg-blue-50/30">Bur Dubai Hub</th>
-                <th className="p-5 text-center bg-blue-50/30">Al Quoz Hub</th>
-                <th className="p-5 text-center bg-emerald-50/30">Central Reserve</th>
+                {(isGlobal || branch === 'Bur Dubai') && <th className="p-5 text-center bg-blue-50/30">Bur Dubai Hub</th>}
+                {(isGlobal || branch === 'Al Quoz') && <th className="p-5 text-center bg-blue-50/30">Al Quoz Hub</th>}
+                {isGlobal && <th className="p-5 text-center bg-emerald-50/30">Central Reserve</th>}
                 <th className="p-5 text-right">Inventory Health</th>
               </tr>
             </thead>
@@ -111,9 +120,9 @@ export const StockView = () => {
                   <td className="p-5">
                     <span className="text-[11px] font-bold text-slate-500 uppercase bg-slate-100/50 px-2 py-1 rounded-md">{item.category}</span>
                   </td>
-                  <td className="p-5 text-center font-black text-slate-700 bg-blue-50/10">{item.burDubai}</td>
-                  <td className="p-5 text-center font-black text-slate-700 bg-blue-50/10">{item.alQuoz}</td>
-                  <td className="p-5 text-center font-black text-emerald-600 bg-emerald-50/10">{item.central}</td>
+                  {(isGlobal || branch === 'Bur Dubai') && <td className="p-5 text-center font-black text-slate-700 bg-blue-50/10">{item.burDubai}</td>}
+                  {(isGlobal || branch === 'Al Quoz') && <td className="p-5 text-center font-black text-slate-700 bg-blue-50/10">{item.alQuoz}</td>}
+                  {isGlobal && <td className="p-5 text-center font-black text-emerald-600 bg-emerald-50/10">{item.central}</td>}
                   <td className="p-5 text-right">
                     <span className={`inline-flex items-center px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-sm ${item.status === 'In Stock' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
                       item.status === 'Low Stock' ? 'bg-amber-50 text-amber-700 border border-amber-200' :

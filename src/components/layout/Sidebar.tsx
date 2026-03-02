@@ -1,20 +1,23 @@
 import { useState } from 'react';
-import { LayoutDashboard, FileText, Package, BarChart2, Building2, Settings, ChevronDown, Store, Users } from 'lucide-react';
+import { LayoutDashboard, FileText, Package, BarChart2, Building2, Settings, ChevronDown, Store, Users, ShoppingCart } from 'lucide-react';
 import { useProcurement } from '../../context/ProcurementContext';
 import { Tab } from '../../types';
 
 export const Sidebar = () => {
-  const { activeTab, setActiveTab } = useProcurement();
+  const { activeTab, setActiveTab, role } = useProcurement();
+  const isSuperAdmin = role === 'Super Admin';
+  const isFinance = role === 'Finance';
+
   const [masterOpen, setMasterOpen] = useState(
     activeTab === 'Store Management' || activeTab === 'User Management'
   );
 
-  const mainNavItems: { icon: any; label: Tab }[] = [
+  // Core nav — visible to everyone
+  const coreNavItems: { icon: any; label: Tab }[] = [
     { icon: LayoutDashboard, label: 'Dashboard' },
     { icon: FileText, label: 'PR Entry' },
     { icon: Package, label: 'Stock' },
     { icon: BarChart2, label: 'Analytics' },
-    { icon: Settings, label: 'Admin' },
   ];
 
   const masterItems: { icon: any; label: Tab }[] = [
@@ -34,8 +37,8 @@ export const Sidebar = () => {
       </div>
 
       <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
-        {/* Main nav */}
-        {mainNavItems.map(item => (
+        {/* Core nav — all roles */}
+        {coreNavItems.map(item => (
           <button
             key={item.label}
             onClick={() => setActiveTab(item.label)}
@@ -49,38 +52,67 @@ export const Sidebar = () => {
           </button>
         ))}
 
-        {/* ── MASTER MODULE ── */}
-        <div className="pt-2">
+        {/* Finance / Super Admin — Purchase Order */}
+        {isFinance && (
           <button
-            onClick={() => setMasterOpen(v => !v)}
-            className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isMasterActive ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+            onClick={() => setActiveTab('Purchase Order')}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeTab === 'Purchase Order'
+              ? 'bg-blue-50 text-blue-700'
+              : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
               }`}
           >
-            <div className="flex items-center gap-3">
-              <Settings className={`w-5 h-5 ${isMasterActive ? 'text-blue-600' : 'text-slate-400'}`} />
-              <span>Master</span>
-            </div>
-            <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${masterOpen ? 'rotate-180' : ''} ${isMasterActive ? 'text-blue-500' : 'text-slate-300'}`} />
+            <ShoppingCart className={`w-5 h-5 ${activeTab === 'Purchase Order' ? 'text-blue-600' : 'text-slate-400'}`} />
+            Purchase Order
           </button>
+        )}
 
-          {masterOpen && (
-            <div className="ml-4 mt-1 space-y-0.5 border-l-2 border-slate-100 pl-3 animate-in slide-in-from-top-1 duration-150">
-              {masterItems.map(item => (
-                <button
-                  key={item.label}
-                  onClick={() => setActiveTab(item.label)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeTab === item.label
-                    ? 'bg-blue-50 text-blue-700'
-                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
-                    }`}
-                >
-                  <item.icon className={`w-4 h-4 ${activeTab === item.label ? 'text-blue-600' : 'text-slate-400'}`} />
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* Super Admin only — Admin */}
+        {isSuperAdmin && (
+          <button
+            onClick={() => setActiveTab('Admin')}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeTab === 'Admin'
+              ? 'bg-blue-50 text-blue-700'
+              : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+              }`}
+          >
+            <Settings className={`w-5 h-5 ${activeTab === 'Admin' ? 'text-blue-600' : 'text-slate-400'}`} />
+            Admin
+          </button>
+        )}
+
+        {/* Super Admin only — Master Module */}
+        {isSuperAdmin && (
+          <div className="pt-2">
+            <button
+              onClick={() => setMasterOpen(v => !v)}
+              className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isMasterActive ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
+            >
+              <div className="flex items-center gap-3">
+                <Settings className={`w-5 h-5 ${isMasterActive ? 'text-blue-600' : 'text-slate-400'}`} />
+                <span>Master</span>
+              </div>
+              <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${masterOpen ? 'rotate-180' : ''} ${isMasterActive ? 'text-blue-500' : 'text-slate-300'}`} />
+            </button>
+
+            {masterOpen && (
+              <div className="ml-4 mt-1 space-y-0.5 border-l-2 border-slate-100 pl-3 animate-in slide-in-from-top-1 duration-150">
+                {masterItems.map(item => (
+                  <button
+                    key={item.label}
+                    onClick={() => setActiveTab(item.label)}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeTab === item.label
+                      ? 'bg-blue-50 text-blue-700'
+                      : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                      }`}
+                  >
+                    <item.icon className={`w-4 h-4 ${activeTab === item.label ? 'text-blue-600' : 'text-slate-400'}`} />
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </nav>
 
       <div className="p-4 border-t border-slate-100 space-y-3">

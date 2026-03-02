@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { useProcurement } from '../../context/ProcurementContext';
 import { PurchaseRequest } from '../../types';
 import { PRDetailModal } from './PRDetailModal';
-import { Plus, Clock, CheckCircle, MapPin, Search, LayoutGrid, List, AlertCircle, TrendingUp, Activity } from 'lucide-react';
+import { Plus, Clock, CheckCircle, MapPin, Search, LayoutGrid, List, AlertCircle, TrendingUp, Activity, Truck, Package } from 'lucide-react';
 import { SLATimer } from '../shared/SLATimer';
 
 // Returns the PRs that are actionable / visible for a given role
-const filterByRole = (prs: PurchaseRequest[], role: string, branch: string): PurchaseRequest[] => {
+export const filterByRole = (prs: PurchaseRequest[], role: string, branch: string): PurchaseRequest[] => {
   const branchPRs = (role === 'Sub Store Keeper' || role === 'Centre In-Charge')
     ? prs.filter(pr => pr.branch === branch)
     : prs;
@@ -75,14 +75,15 @@ const getActionQueue = (prs: PurchaseRequest[], role: string, branch: string): P
       return branchPRs.filter(pr => pr.status === 'Pending - Centre In-Charge');
     case 'Central Store':
       return prs.filter(pr =>
-        ['Pending - Central Store', 'Dispatch Scheduled'].includes(pr.status)
+        ['Pending - Central Store', 'Dispatch Scheduled', 'GRN Pending'].includes(pr.status) &&
+        (pr.status !== 'GRN Pending' || pr.deliveryLocation === 'Central Store')
       );
     case 'Procurement Officer':
-      return prs.filter(pr => pr.status === 'Pending - Procurement');
+      return prs.filter(pr => ['Pending - Procurement', 'PO Issued', 'Order Placed'].includes(pr.status));
     case 'SMD':
       return prs.filter(pr => pr.status === 'Pending - SMD');
     case 'Finance':
-      return prs.filter(pr => pr.status === 'Pending - Finance');
+      return prs.filter(pr => ['Pending - Finance', 'PO Issued'].includes(pr.status));
     default:
       return prs.filter(pr => !['Closed - Completed', 'Delivered'].includes(pr.status));
   }
@@ -122,6 +123,10 @@ export const Dashboard = () => {
               role === 'Central Store' ? 9 :
                 role === 'Centre In-Charge' ? 5 : 4);
   })();
+
+  const pendingDeliveries = allVisible.filter(pr => ['Dispatch Scheduled', 'In Transit', 'GRN Pending', 'Order Placed'].includes(pr.status)).length;
+  const goodsReceived = allVisible.filter(pr => ['GRN Completed', 'Delivered'].includes(pr.status)).length;
+  const locationsCount = new Set(allVisible.map(pr => pr.branch)).size;
 
   const roleSummary: Record<string, string> = {
     'Super Admin': 'Full visibility across all branches and workflow stages',
@@ -184,6 +189,42 @@ export const Dashboard = () => {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Tracking Containers */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-gradient-to-br from-indigo-50 to-white p-6 rounded-2xl border border-indigo-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2.5 bg-indigo-100 text-indigo-600 rounded-xl"><Truck className="w-5 h-5" /></div>
+            <h3 className="font-black text-indigo-900 uppercase tracking-widest text-xs">Pending Deliveries</h3>
+          </div>
+          <div>
+            <p className="text-3xl font-black text-indigo-700">{pendingDeliveries}</p>
+            <p className="text-[10px] text-indigo-400 font-black tracking-widest uppercase mt-1">In Transit / Dispatched</p>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-teal-50 to-white p-6 rounded-2xl border border-teal-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2.5 bg-teal-100 text-teal-600 rounded-xl"><Package className="w-5 h-5" /></div>
+            <h3 className="font-black text-teal-900 uppercase tracking-widest text-xs">Goods Received</h3>
+          </div>
+          <div>
+            <p className="text-3xl font-black text-teal-700">{goodsReceived}</p>
+            <p className="text-[10px] text-teal-400 font-black tracking-widest uppercase mt-1">GRN Completed / Delivered</p>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-slate-50 to-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2.5 bg-slate-200 text-slate-700 rounded-xl"><MapPin className="w-5 h-5" /></div>
+            <h3 className="font-black text-slate-900 uppercase tracking-widest text-xs">Active Locations</h3>
+          </div>
+          <div>
+            <p className="text-3xl font-black text-slate-800">{locationsCount}</p>
+            <p className="text-[10px] text-slate-400 font-black tracking-widest uppercase mt-1">Branches with open PRs</p>
+          </div>
+        </div>
       </div>
 
       {/* Priority Task List */}
