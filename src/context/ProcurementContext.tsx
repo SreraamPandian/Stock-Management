@@ -20,34 +20,93 @@ const hour = 3600000;
 const day = 24 * hour;
 
 const initialState: PurchaseRequest[] = [
+  // ── BUR DUBAI PRs ──────────────────────────────
   {
-    id: 'PR-2025-001', branch: 'Bur Dubai', department: 'Cardiology', category: 'Surgical Instruments', quantity: 50, requester: 'Dr. Ahmed', priority: 'Normal',
+    id: 'PR-2025-001', branch: 'Bur Dubai', department: 'Cardiology', category: 'Surgical Instruments',
+    itemName: 'Scalpel Set #10', quantity: 50, requester: 'Dr. Ahmed', priority: 'Normal',
     status: 'Pending - Centre In-Charge', createdAt: now - (36 * hour), slaDeadline: now - (12 * hour), smdApproved: false,
     history: [{ id: 'h1', stage: 'Initiation', action: 'Raised PR', timestamp: now - (36 * hour), userRole: 'Sub Store Keeper' }]
   },
   {
-    id: 'PR-2025-002', branch: 'Al Quoz', department: 'Emergency', category: 'Life Support Consumables', quantity: 200, requester: 'Nurse Fatima', priority: 'Emergency',
+    id: 'PR-2025-003', branch: 'Bur Dubai', department: 'Pharmacy', category: 'Medications',
+    itemName: 'Paracetamol 500mg x500', quantity: 500, requester: 'Pharm. Ali', priority: 'High',
+    status: 'Pending - Central Store', createdAt: now - (24 * hour), slaDeadline: now + (12 * hour), smdApproved: false,
+    history: [
+      { id: 'h3', stage: 'Initiation', action: 'Raised PR', timestamp: now - (24 * hour), userRole: 'Sub Store Keeper' },
+      { id: 'h4', stage: 'Centre Approval', action: 'Approved & Forwarded', timestamp: now - (20 * hour), userRole: 'Centre In-Charge' }
+    ]
+  },
+  {
+    id: 'PR-2025-005', branch: 'Bur Dubai', department: 'ICU', category: 'Equipment',
+    itemName: 'Ventilator Filter Set', quantity: 2, requester: 'Dr. Hassan', priority: 'Emergency',
+    status: 'Pending - SMD', createdAt: now - (72 * hour), slaDeadline: now + (2 * hour), smdApproved: false,
+    smdActionDeadline: now - (68 * hour),
+    history: [
+      { id: 'h8', stage: 'Initiation', action: 'Raised PR', timestamp: now - (72 * hour), userRole: 'Sub Store Keeper' },
+      { id: 'h9', stage: 'Centre Approval', action: 'Approved', timestamp: now - (70 * hour), userRole: 'Centre In-Charge' },
+      { id: 'h10', stage: 'Procurement', action: 'Sourced & Forwarded', timestamp: now - (69 * hour), userRole: 'Procurement Officer', notes: 'Vendor: MedSupply Co.' }
+    ]
+  },
+  {
+    id: 'PR-2025-009', branch: 'Bur Dubai', department: 'Pediatrics', category: 'Consumables',
+    itemName: 'Pediatric Oxygen Mask', quantity: 150, requester: 'Dr. Nora', priority: 'Normal',
+    status: 'PO Issued', createdAt: now - (10 * hour), slaDeadline: now + (38 * hour), smdApproved: true,
+    vendor: 'MedLine Gulf', price: 4500.00, paymentMode: 'On Delivery',
+    history: [
+      { id: 'h18a', stage: 'Initiation', action: 'Raised PR', timestamp: now - (10 * hour), userRole: 'Sub Store Keeper' },
+      { id: 'h18b', stage: 'Finance', action: 'Clearance Issued', timestamp: now - (2 * hour), userRole: 'Finance' }
+    ]
+  },
+  {
+    id: 'PR-2025-020', branch: 'Bur Dubai', department: 'ICU', category: 'Consumables',
+    itemName: 'IV Cannula 18G x150', quantity: 150, requester: 'Dr. John', priority: 'High',
+    status: 'Dispatch Scheduled', createdAt: now - (48 * hour), slaDeadline: now + (2 * hour), smdApproved: true,
+    expectedDeliveryDate: now + (24 * hour),
+    history: [
+      { id: 'h20a', stage: 'Initiation', action: 'Raised PR', timestamp: now - (48 * hour), userRole: 'Sub Store Keeper' },
+      { id: 'h20b', stage: 'Central Store', action: 'Scheduled for Dispatch', timestamp: now - hour, userRole: 'Central Store', notes: 'Transport vehicle assigned' }
+    ]
+  },
+  {
+    id: 'PR-2025-021', branch: 'Bur Dubai', department: 'OPD', category: 'Consumables',
+    itemName: 'Disposable Gloves L x400', quantity: 400, requester: 'Nurse Hana', priority: 'Normal',
+    status: 'Closed - Completed', createdAt: now - (7 * day), slaDeadline: now - (5 * day), smdApproved: true,
+    vendor: 'SafeMed Supplies', price: 1200, paymentMode: '100% Advance', barcode: 'BC-2025-021',
+    receivedQuantity: 400, condition: 'Good',
+    history: [
+      { id: 'h21a', stage: 'Initiation', action: 'Raised PR', timestamp: now - (7 * day), userRole: 'Sub Store Keeper' },
+      { id: 'h21b', stage: 'GRN', action: 'Goods Received & Verified', timestamp: now - (5 * day), userRole: 'Sub Store Keeper' }
+    ]
+  },
+  {
+    id: 'PR-2025-022', branch: 'Bur Dubai', department: 'ENT', category: 'Equipment',
+    itemName: 'Otoscope Set', quantity: 3, requester: 'Dr. Bilal', priority: 'Medium',
+    status: 'Pending - Procurement', createdAt: now - (3 * day), slaDeadline: now + (2 * day), smdApproved: false,
+    history: [
+      { id: 'h22a', stage: 'Initiation', action: 'Raised PR', timestamp: now - (3 * day), userRole: 'Sub Store Keeper' },
+      { id: 'h22b', stage: 'Centre Approval', action: 'Approved', timestamp: now - (2 * day), userRole: 'Centre In-Charge' },
+      { id: 'h22c', stage: 'Central Store', action: 'Forwarded to Procurement', timestamp: now - day, userRole: 'Central Store' }
+    ]
+  },
+  {
+    id: 'PR-2025-023', branch: 'Bur Dubai', department: 'Cardiology', category: 'Medications',
+    itemName: 'Aspirin 75mg x200', quantity: 200, requester: 'Dr. Ahmed', priority: 'Normal',
+    status: 'Rejected - Action Required', createdAt: now - (5 * day), slaDeadline: now - (3 * day), smdApproved: false,
+    history: [
+      { id: 'h23a', stage: 'Initiation', action: 'Raised PR', timestamp: now - (5 * day), userRole: 'Sub Store Keeper' },
+      { id: 'h23b', stage: 'Centre Approval', action: 'Rejected — Incomplete specification', timestamp: now - (4 * day), userRole: 'Centre In-Charge', rejectionReason: 'Item specification incomplete. Brand/generic not specified.' }
+    ]
+  },
+  // ── AL QUOZ PRs ──────────────────────────────
+  {
+    id: 'PR-2025-002', branch: 'Al Quoz', department: 'Emergency', category: 'Life Support Consumables',
+    itemName: 'Ambu Bag Adult', quantity: 200, requester: 'Nurse Fatima', priority: 'Emergency',
     status: 'Pending - Centre In-Charge', createdAt: now - (2 * hour), slaDeadline: now - (1 * hour), smdApproved: false,
     history: [{ id: 'h2', stage: 'Initiation', action: 'Raised PR', timestamp: now - (2 * hour), userRole: 'Sub Store Keeper' }]
   },
   {
-    id: 'PR-2025-003', branch: 'Bur Dubai', department: 'Pharmacy', category: 'Medications', quantity: 500, requester: 'Pharm. Ali', priority: 'High',
-    status: 'Pending - Central Store', createdAt: now - (24 * hour), slaDeadline: now + (12 * hour), smdApproved: false,
-    history: [
-      { id: 'h3', stage: 'Initiation', action: 'Raised PR', timestamp: now - (24 * hour), userRole: 'Sub Store Keeper' },
-      { id: 'h4', stage: 'Centre Approval', action: 'Approved', timestamp: now - (20 * hour), userRole: 'Centre In-Charge' }
-    ]
-  },
-  {
-    id: 'PR-2025-020', branch: 'Bur Dubai', department: 'ICU', category: 'Consumables', quantity: 150, requester: 'Dr. John', priority: 'High',
-    status: 'Dispatch Scheduled', createdAt: now - (48 * hour), slaDeadline: now + (2 * hour), smdApproved: false,
-    expectedDeliveryDate: now + (24 * hour),
-    history: [
-      { id: 'h20', stage: 'Central Store', action: 'Scheduled for Dispatch', timestamp: now - hour, userRole: 'Central Store', notes: 'Transport pending' }
-    ]
-  },
-  {
-    id: 'PR-2025-004', branch: 'Al Quoz', department: 'Laboratory', category: 'Consumables', quantity: 1000, requester: 'Tech Sarah', priority: 'Medium',
+    id: 'PR-2025-004', branch: 'Al Quoz', department: 'Laboratory', category: 'Consumables',
+    itemName: 'Lab Test Strips x1000', quantity: 1000, requester: 'Tech Sarah', priority: 'Medium',
     status: 'Pending - Procurement', createdAt: now - (48 * hour), slaDeadline: now + (24 * hour), smdApproved: false,
     history: [
       { id: 'h5', stage: 'Initiation', action: 'Raised PR', timestamp: now - (48 * hour), userRole: 'Sub Store Keeper' },
@@ -56,35 +115,109 @@ const initialState: PurchaseRequest[] = [
     ]
   },
   {
-    id: 'PR-2025-005', branch: 'Bur Dubai', department: 'ICU', category: 'Equipment', quantity: 2, requester: 'Dr. Hassan', priority: 'Emergency',
-    status: 'Pending - SMD', createdAt: now - (72 * hour), slaDeadline: now + (2 * hour), smdApproved: false,
-    smdActionDeadline: now - (68 * hour), // Breached
-    history: [
-      { id: 'h8', stage: 'Initiation', action: 'Raised PR', timestamp: now - (72 * hour), userRole: 'Sub Store Keeper' },
-      { id: 'h9', stage: 'Centre Approval', action: 'Approved', timestamp: now - (70 * hour), userRole: 'Centre In-Charge' },
-      { id: 'h10', stage: 'Procurement', action: 'Sourced & Forwarded', timestamp: now - (69 * hour), userRole: 'Procurement Officer', notes: 'Vendor: MedSupply Co.' }
-    ]
-  },
-  {
-    id: 'PR-2025-006', branch: 'Al Quoz', department: 'Radiology', category: 'MRI Contrast Agent', quantity: 100, requester: 'Dr. Smith', priority: 'High',
+    id: 'PR-2025-006', branch: 'Al Quoz', department: 'Radiology', category: 'MRI Contrast Agent',
+    itemName: 'Gadolinium 10ml Vials', quantity: 100, requester: 'Dr. Smith', priority: 'High',
     status: 'Pending - Finance', createdAt: now - (96 * hour), slaDeadline: now + (8 * hour), smdApproved: true,
-    isLocked: true,
+    isLocked: true, vendor: 'MedChem Gulf', price: 28000,
     history: [
       { id: 'h11', stage: 'Initiation', action: 'Raised PR', timestamp: now - (96 * hour), userRole: 'Sub Store Keeper' },
       { id: 'h12', stage: 'SMD Approval', action: 'Approved', timestamp: now - (24 * hour), userRole: 'SMD' }
     ]
   },
   {
-    id: 'PR-2025-009', branch: 'Bur Dubai', department: 'Pediatrics', category: 'Consumables', quantity: 150, requester: 'Dr. Nora', priority: 'Normal',
-    status: 'PO Issued', createdAt: now - (10 * hour), slaDeadline: now + (38 * hour), smdApproved: true,
-    history: [{ id: 'h18', stage: 'Finance', action: 'Approved', timestamp: now - (2 * hour), userRole: 'Finance' }]
-  },
-  {
-    id: 'PR-2025-010', branch: 'Al Quoz', department: 'Orthopedics', category: 'Implants', quantity: 10, requester: 'Dr. Zayed', priority: 'Emergency',
+    id: 'PR-2025-010', branch: 'Al Quoz', department: 'Orthopedics', category: 'Implants',
+    itemName: 'Titanium Bone Plate Set', quantity: 10, requester: 'Dr. Zayed', priority: 'Emergency',
     status: 'In Transit', createdAt: now - (5 * hour), slaDeadline: now + (19 * hour), smdApproved: true,
     dispatchDate: now - hour, expectedDeliveryDate: now + (2 * hour),
-    history: [{ id: 'h19', stage: 'Central Store', action: 'Dispatched', timestamp: now - hour, userRole: 'Central Store' }]
-  }
+    vendor: 'OrthoProfix', price: 52000,
+    history: [
+      { id: 'h19', stage: 'Central Store', action: 'Dispatched to Al Quoz', timestamp: now - hour, userRole: 'Central Store' }
+    ]
+  },
+  {
+    id: 'PR-2025-024', branch: 'Al Quoz', department: 'Pharmacy', category: 'Medications',
+    itemName: 'Metformin 500mg x500', quantity: 500, requester: 'Pharm. Riya', priority: 'Normal',
+    status: 'Closed - Completed', createdAt: now - (10 * day), slaDeadline: now - (8 * day), smdApproved: true,
+    vendor: 'PharmaDist UAE', price: 3400, barcode: 'BC-2025-024',
+    receivedQuantity: 500, condition: 'Good',
+    history: [
+      { id: 'h24a', stage: 'Initiation', action: 'Raised PR', timestamp: now - (10 * day), userRole: 'Sub Store Keeper' },
+      { id: 'h24b', stage: 'GRN', action: 'Goods Received & Verified', timestamp: now - (8 * day), userRole: 'Sub Store Keeper' }
+    ]
+  },
+  {
+    id: 'PR-2025-025', branch: 'Al Quoz', department: 'Emergency', category: 'Equipment',
+    itemName: 'Defibrillator AED', quantity: 1, requester: 'Dr. Omar', priority: 'Emergency',
+    status: 'Pending - SMD', createdAt: now - (4 * hour), slaDeadline: now + (4 * hour), smdApproved: false,
+    smdActionDeadline: now + (3 * hour),
+    history: [
+      { id: 'h25a', stage: 'Initiation', action: 'Raised PR', timestamp: now - (4 * hour), userRole: 'Sub Store Keeper' },
+      { id: 'h25b', stage: 'Centre Approval', action: 'Approved — Emergency', timestamp: now - (3 * hour), userRole: 'Centre In-Charge' },
+      { id: 'h25c', stage: 'Procurement', action: 'Vendor Sourced: MedTech UAE', timestamp: now - (2 * hour), userRole: 'Procurement Officer' }
+    ]
+  },
+  {
+    id: 'PR-2025-026', branch: 'Al Quoz', department: 'Laboratory', category: 'Consumables',
+    itemName: 'PCR Test Kits x200', quantity: 200, requester: 'Tech James', priority: 'High',
+    status: 'Delivered', createdAt: now - (6 * day), slaDeadline: now - (4 * day), smdApproved: true,
+    actualDeliveryDate: now - (4 * day), receivedQuantity: 198, condition: 'Good',
+    history: [
+      { id: 'h26a', stage: 'Initiation', action: 'Raised PR', timestamp: now - (6 * day), userRole: 'Sub Store Keeper' },
+      { id: 'h26b', stage: 'Delivery', action: 'Delivered & GRN Filed', timestamp: now - (4 * day), userRole: 'Sub Store Keeper' }
+    ]
+  },
+  {
+    id: 'PR-2025-027', branch: 'Al Quoz', department: 'Orthopedics', category: 'Consumables',
+    itemName: 'Surgical Drapes x100', quantity: 100, requester: 'Dr. Zayed', priority: 'Medium',
+    status: 'Pending - Central Store', createdAt: now - (2 * day), slaDeadline: now + (day), smdApproved: false,
+    history: [
+      { id: 'h27a', stage: 'Initiation', action: 'Raised PR', timestamp: now - (2 * day), userRole: 'Sub Store Keeper' },
+      { id: 'h27b', stage: 'Centre Approval', action: 'Approved', timestamp: now - (day + 12 * hour), userRole: 'Centre In-Charge' }
+    ]
+  },
+  // ── OLDER PRs for Velocity Chart spread ──────────────────────────────
+  {
+    id: 'PR-2025-011', branch: 'Bur Dubai', department: 'Pharmacy', category: 'Medications',
+    itemName: 'Amoxicillin 250mg x300', quantity: 300, requester: 'Pharm. Ali', priority: 'Normal',
+    status: 'Closed - Completed', createdAt: now - (14 * day), slaDeadline: now - (12 * day), smdApproved: true,
+    history: [{ id: 'h11x', stage: 'Initiation', action: 'Raised PR', timestamp: now - (14 * day), userRole: 'Sub Store Keeper' }]
+  },
+  {
+    id: 'PR-2025-012', branch: 'Al Quoz', department: 'Emergency', category: 'Consumables',
+    itemName: 'Oxygen Cylinder Regulator', quantity: 5, requester: 'Nurse Fatima', priority: 'High',
+    status: 'Closed - Completed', createdAt: now - (21 * day), slaDeadline: now - (19 * day), smdApproved: true,
+    history: [{ id: 'h12x', stage: 'Initiation', action: 'Raised PR', timestamp: now - (21 * day), userRole: 'Sub Store Keeper' }]
+  },
+  {
+    id: 'PR-2025-013', branch: 'Bur Dubai', department: 'ICU', category: 'Equipment',
+    itemName: 'Pulse Oximeter', quantity: 4, requester: 'Dr. John', priority: 'High',
+    status: 'Closed - Completed', createdAt: now - (28 * day), slaDeadline: now - (26 * day), smdApproved: true,
+    history: [{ id: 'h13x', stage: 'Initiation', action: 'Raised PR', timestamp: now - (28 * day), userRole: 'Sub Store Keeper' }]
+  },
+  {
+    id: 'PR-2025-014', branch: 'Al Quoz', department: 'Radiology', category: 'Consumables',
+    itemName: 'X-Ray Film 35x43cm x50', quantity: 50, requester: 'Dr. Smith', priority: 'Normal',
+    status: 'Closed - Completed', createdAt: now - (42 * day), slaDeadline: now - (40 * day), smdApproved: true,
+    history: [{ id: 'h14x', stage: 'Initiation', action: 'Raised PR', timestamp: now - (42 * day), userRole: 'Sub Store Keeper' }]
+  },
+  {
+    id: 'PR-2025-015', branch: 'Bur Dubai', department: 'Cardiology', category: 'Medications',
+    itemName: 'Clopidogrel 75mg x100', quantity: 100, requester: 'Dr. Ahmed', priority: 'Medium',
+    status: 'Closed - Completed', createdAt: now - (56 * day), slaDeadline: now - (54 * day), smdApproved: true,
+    history: [{ id: 'h15x', stage: 'Initiation', action: 'Raised PR', timestamp: now - (56 * day), userRole: 'Sub Store Keeper' }]
+  },
+  {
+    id: 'PR-2025-016', branch: 'Al Quoz', department: 'Laboratory', category: 'Consumables',
+    itemName: 'Specimen Containers x500', quantity: 500, requester: 'Tech Sarah', priority: 'Normal',
+    status: 'Closed - Completed', createdAt: now - (63 * day), slaDeadline: now - (61 * day), smdApproved: true,
+    history: [{ id: 'h16x', stage: 'Initiation', action: 'Raised PR', timestamp: now - (63 * day), userRole: 'Sub Store Keeper' }]
+  },
+  {
+    id: 'PR-2025-017', branch: 'Bur Dubai', department: 'ENT', category: 'Equipment',
+    itemName: 'Audiometer Calibration Kit', quantity: 1, requester: 'Dr. Bilal', priority: 'Normal',
+    status: 'Closed - Completed', createdAt: now - (77 * day), slaDeadline: now - (75 * day), smdApproved: true,
+    history: [{ id: 'h17x', stage: 'Initiation', action: 'Raised PR', timestamp: now - (77 * day), userRole: 'Sub Store Keeper' }]
+  },
 ];
 
 const deptBudgets: Record<string, { approved: number, consumed: number }> = {
@@ -105,7 +238,7 @@ const ProcurementContext = createContext<ProcurementContextType | undefined>(und
 export const ProcurementProvider = ({ children }: { children: ReactNode }) => {
   const [role, setRole] = useState<Role>(() => {
     const saved = localStorage.getItem('procurement_role');
-    return (saved as Role) || 'Sub Store Keeper';
+    return (saved as Role) || 'Super Admin';
   });
   const [branch, setBranch] = useState<string>(() => {
     const saved = localStorage.getItem('procurement_branch');
@@ -113,8 +246,15 @@ export const ProcurementProvider = ({ children }: { children: ReactNode }) => {
   });
   const [activeTab, setActiveTab] = useState<Tab>('Dashboard');
   const [prs, setPrs] = useState<PurchaseRequest[]>(() => {
-    const saved = localStorage.getItem('procurement_prs');
-    return saved ? JSON.parse(saved) : initialState;
+    try {
+      const saved = localStorage.getItem('procurement_prs');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Version guard: if stored data is old/sparse (< 15 PRs), reload fresh initialState
+        if (Array.isArray(parsed) && parsed.length >= 15) return parsed;
+      }
+    } catch { /* ignore parse errors */ }
+    return initialState;
   });
 
   useEffect(() => {

@@ -1,4 +1,5 @@
 export type Role =
+  | 'Super Admin'
   | 'Sub Store Keeper'
   | 'Centre In-Charge'
   | 'Central Store'
@@ -22,7 +23,31 @@ export type PRStatus =
   | 'Closed - Completed'
   | 'Rejected - Action Required';
 
-export type Tab = 'Dashboard' | 'PR Entry' | 'Stock' | 'Analytics' | 'Admin';
+export type Tab = 'Dashboard' | 'PR Entry' | 'Stock' | 'Analytics' | 'Admin' | 'Store Management' | 'User Management';
+
+export interface Store {
+  id: string;
+  name: string;
+  branch: string;
+  location: string;
+  type: 'Sub Store' | 'Central Store';
+  incharge: string;
+  capacity: number;
+  status: 'Active' | 'Inactive';
+}
+
+export interface MasterUser {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: Role;
+  branch: string;
+  status: 'Active' | 'On Leave' | 'Suspended';
+  joined: string;
+  lastLogin: string;
+}
+
 
 export interface PRHistory {
   id: string;

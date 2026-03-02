@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ProcurementProvider, useProcurement } from './context/ProcurementContext';
 import { Layout } from './components/layout/Layout';
 import { Dashboard } from './components/dashboard/Dashboard';
@@ -5,6 +6,9 @@ import { NewPRForm } from './components/forms/NewPRForm';
 import { StockView } from './components/views/StockView';
 import { AnalyticsView } from './components/views/AnalyticsView';
 import { AdminView } from './components/views/AdminView';
+import { StoreManagementView } from './components/views/StoreManagementView';
+import { UserManagementView } from './components/views/UserManagementView';
+import { LoginPage } from './components/auth/LoginPage';
 
 const AppContent = () => {
   const { activeTab, setActiveTab } = useProcurement();
@@ -21,7 +25,7 @@ const AppContent = () => {
                 <h1 className="text-3xl font-black text-slate-900 tracking-tight">Purchase Request Initiation</h1>
                 <p className="text-slate-500 font-medium mt-1 uppercase text-[10px] tracking-widest flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-                  Official Sourcing & Inventory Procurement System
+                  Official Sourcing &amp; Inventory Procurement System
                 </p>
               </div>
               <button
@@ -82,6 +86,10 @@ const AppContent = () => {
         return <AnalyticsView />;
       case 'Admin':
         return <AdminView />;
+      case 'Store Management':
+        return <StoreManagementView />;
+      case 'User Management':
+        return <UserManagementView />;
       default:
         return <Dashboard />;
     }
@@ -95,6 +103,20 @@ const AppContent = () => {
 };
 
 function App() {
+  const [loggedIn, setLoggedIn] = useState(() => {
+    return !!localStorage.getItem('probiz_logged_in');
+  });
+
+  const handleLogin = (role: string, _name: string) => {
+    localStorage.setItem('probiz_logged_in', 'true');
+    localStorage.setItem('procurement_role', role);
+    setLoggedIn(true);
+  };
+
+  if (!loggedIn) {
+    return <LoginPage onLogin={handleLogin} />;
+  }
+
   return (
     <ProcurementProvider>
       <AppContent />

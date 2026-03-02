@@ -40,6 +40,15 @@ export const AdminView = () => {
   // Add User form state
   const [addForm, setAddForm] = useState({ name: '', email: '', role: 'Sub Store Keeper', branch: 'Bur Dubai', phone: '', password: '' });
 
+  const generatePassword = () => {
+    const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    const special = '!@#$';
+    let p = '';
+    for (let i = 0; i < 7; i++) p += chars[Math.floor(Math.random() * chars.length)];
+    p += special[Math.floor(Math.random() * special.length)];
+    return 'Tmp' + p;
+  };
+
   const openEdit = (user: typeof mockUsers[0]) => {
     setEditUser(user);
     setEditForm({ name: user.name, email: user.email, role: user.role, branch: user.branch, phone: user.phone, status: user.status });
@@ -150,14 +159,20 @@ export const AdminView = () => {
                   {['Bur Dubai', 'Al Quoz', 'Global'].map(b => <option key={b}>{b}</option>)}
                 </select>
               </div>
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Temp Password</label>
-                <div className="relative">
-                  <input type={showPassword ? 'text' : 'password'} placeholder="Auto-generated" value={addForm.password} onChange={e => setAddForm({ ...addForm, password: e.target.value })} className="w-full border border-slate-200 rounded-xl p-3 pr-10 text-sm outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all" />
-                  <button onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3.5 text-slate-300 hover:text-slate-500">
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+              <div className="col-span-2">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Generated Temp Password</label>
+                <div className="relative bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-center justify-between">
+                  <span className="font-mono text-sm text-blue-800 font-bold tracking-wider">
+                    {showPassword ? addForm.password : '•'.repeat(addForm.password.length)}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setShowPassword(!showPassword)} className="text-blue-400 hover:text-blue-700">
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                    <button onClick={() => navigator.clipboard?.writeText(addForm.password)} className="text-[10px] font-black text-blue-600 bg-blue-100 hover:bg-blue-200 px-2 py-1 rounded-lg uppercase tracking-widest transition-all">Copy</button>
+                  </div>
                 </div>
+                <p className="text-[9px] text-slate-400 mt-1 font-medium">Share this with the user. They must change it on first login.</p>
               </div>
             </div>
             <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-slate-50">
@@ -231,7 +246,7 @@ export const AdminView = () => {
             <Activity className="w-4 h-4" /> Detailed Audit Log
           </button>
           <button
-            onClick={() => setShowAddModal(true)}
+            onClick={() => { setAddForm({ name: '', email: '', role: 'Sub Store Keeper', branch: 'Bur Dubai', phone: '', password: generatePassword() }); setShowAddModal(true); }}
             className="flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-xl hover:bg-slate-800 transition-all font-bold text-xs uppercase tracking-widest shadow-xl shadow-slate-200"
           >
             <UserPlus className="w-4 h-4" /> Provision New User

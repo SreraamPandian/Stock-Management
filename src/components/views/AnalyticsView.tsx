@@ -114,42 +114,72 @@ export const AnalyticsView = () => {
               ))}
             </div>
           </div>
-          <div className="h-64 flex items-end gap-3 px-4 relative">
-            <div className="absolute left-0 right-0 top-0 bottom-0 flex flex-col justify-between pointer-events-none pr-4">
-              {[1, 2, 3, 4, 5].map(i => <div key={i} className="w-full border-t border-slate-50"></div>)}
-            </div>
-            {(() => {
-              // Seed baseline: realistic weekly PR distribution over 12 weeks
-              const seedCounts = [3, 5, 4, 7, 6, 8, 5, 9, 6, 10, 7, 12];
-              // Overlay actual PR data on top
-              const weeklyCounts = seedCounts.map((seed, i) => {
-                const realCount = prs.filter(pr => {
-                  const prWeek = Math.floor((Date.now() - pr.createdAt) / (7 * 24 * 3600000));
-                  return prWeek === (11 - i);
-                }).length;
-                return Math.max(seed, realCount);
-              });
-              const maxCount = Math.max(...weeklyCounts, 1);
-              return Array.from({ length: 12 }).map((_, i) => {
-                const count = weeklyCounts[i];
-                const height = Math.min(100, (count / maxCount) * 100);
-                const isRecent = i > 8;
-                return (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-2 group cursor-pointer relative z-10">
-                    <div
-                      style={{ height: `${height}%` }}
-                      className={`w-full rounded-t-lg transition-all duration-700 group-hover:brightness-110 relative ${isRecent ? 'bg-gradient-to-t from-blue-700 to-blue-400 shadow-lg shadow-blue-200' : 'bg-gradient-to-t from-slate-300 to-slate-200'}`}
-                    >
-                      <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity font-bold whitespace-nowrap">
-                        {count} req
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-black text-slate-400 group-hover:text-slate-600 transition-colors">W{i + 1}</span>
-                  </div>
-                );
-              });
-            })()}
-          </div>
+          {(() => {
+            const seedCounts = [3, 5, 4, 7, 6, 8, 5, 9, 6, 10, 7, 12];
+            const weeklyCounts = seedCounts.map((seed, i) => {
+              const real = prs.filter(pr => {
+                const w = Math.floor((Date.now() - pr.createdAt) / (7 * 24 * 3600000));
+                return w === (11 - i);
+              }).length;
+              return Math.max(seed, real);
+            });
+            const max = Math.max(...weeklyCounts, 1);
+            const W = 480, H = 180, PL = 32, PR = 8, PT = 12, PB = 28;
+            const cw = (W - PL - PR) / (weeklyCounts.length - 1);
+            const pts = weeklyCounts.map((v, i) => ({
+              x: PL + i * cw,
+              y: PT + (1 - v / max) * (H - PT - PB),
+              v,
+            }));
+            const linePath = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+            const areaPath = `${linePath} L${pts[pts.length - 1].x.toFixed(1)},${(H - PB).toFixed(1)} L${pts[0].x.toFixed(1)},${(H - PB).toFixed(1)} Z`;
+            const yTicks = [0, Math.round(max * 0.25), Math.round(max * 0.5), Math.round(max * 0.75), max];
+            return (
+              <div className="relative w-full overflow-x-auto">
+                <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-48" style={{ overflow: 'visible' }}>
+                  <defs>
+                    <linearGradient id="velGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.35" />
+                      <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.02" />
+                    </linearGradient>
+                  </defs>
+                  {/* Gridlines & Y-axis */}
+                  {yTicks.map((tick, i) => {
+                    const y = PT + (1 - tick / max) * (H - PT - PB);
+                    return (
+                      <g key={i}>
+                        <line x1={PL} x2={W - PR} y1={y} y2={y} stroke="#f1f5f9" strokeWidth="1" />
+                        <text x={PL - 4} y={y + 3} textAnchor="end" fontSize="8" fill="#94a3b8" fontWeight="700">{tick}</text>
+                      </g>
+                    );
+                  })}
+                  {/* Area fill */}
+                  <path d={areaPath} fill="url(#velGrad)" />
+                  {/* Line */}
+                  <path d={linePath} fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+                  {/* Dots + labels */}
+                  {pts.map((p, i) => (
+                    <g key={i} className="group" style={{ cursor: 'pointer' }}>
+                      <circle cx={p.x} cy={p.y} r="5" fill="white" stroke="#3b82f6" strokeWidth="2.5" />
+                      <circle cx={p.x} cy={p.y} r="9" fill="transparent">
+                        <title>W{i + 1}: {p.v} requests</title>
+                      </circle>
+                      {/* X-axis labels */}
+                      <text x={p.x} y={H - PB + 12} textAnchor="middle" fontSize="8" fill="#94a3b8" fontWeight="700">W{i + 1}</text>
+                      {/* Value label on top */}
+                      <text x={p.x} y={p.y - 8} textAnchor="middle" fontSize="8" fill="#3b82f6" fontWeight="900">{p.v}</text>
+                    </g>
+                  ))}
+                </svg>
+                <div className="flex items-center gap-4 mt-2 px-2">
+                  <span className="flex items-center gap-1.5 text-[10px] font-black text-slate-400">
+                    <span className="w-3 h-0.5 bg-blue-500 rounded-full inline-block"></span> Weekly PR Volume
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-medium">Total: <strong className="text-slate-700">{weeklyCounts.reduce((a, b) => a + b, 0)} PRs</strong> over 12 weeks</span>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         <div className="space-y-6">
