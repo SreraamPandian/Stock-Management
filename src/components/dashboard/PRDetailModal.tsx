@@ -43,7 +43,8 @@ export const PRDetailModal = ({ pr, onClose }: Props) => {
     structure: '100% Advance',
     timeline: '30',
     ack: false,
-    receivedQty: pr.quantity.toString()
+    receivedQty: pr.quantity.toString(),
+    grnNumber: pr.grnNumber || ''
   });
 
   // Procurement Specific States
@@ -169,7 +170,9 @@ export const PRDetailModal = ({ pr, onClose }: Props) => {
       );
     }
 
-    const canDoGRN = (role === 'Sub Store Keeper' && pr.deliveryLocation !== 'Central Store') || (role === 'Central Store' && pr.deliveryLocation === 'Central Store');
+    const canDoGRN = (role === 'Sub Store Keeper' && pr.deliveryLocation !== 'Central Store') || 
+                     (role === 'Central Store' && pr.deliveryLocation === 'Central Store') ||
+                     (role === 'Super Admin');
     if (canDoGRN && ['PO Issued', 'Order Placed', 'GRN Pending', 'Dispatched', 'In Transit'].includes(pr.status)) {
       return (
         <div className="w-full space-y-6 bg-blue-50/50 p-6 rounded-2xl border border-blue-100 mb-6">
@@ -194,11 +197,23 @@ export const PRDetailModal = ({ pr, onClose }: Props) => {
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Discrepancy Remarks</label>
+                <label className="block text-[10px] font-black text-rose-600 uppercase mb-1 flex items-center gap-1">
+                  GRN Number <span className="text-[8px] bg-rose-100 px-1 rounded">Required</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter manual GRN ref..."
+                  className={`w-full border border-slate-200 rounded-lg p-2.5 text-sm font-black outline-none focus:ring-2 focus:ring-blue-500 ${!extraFormData.grnNumber ? 'border-rose-200 bg-rose-50/30' : ''}`}
+                  value={extraFormData.grnNumber}
+                  onChange={e => setExtraFormData({ ...extraFormData, grnNumber: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-500 uppercase mb-1 text-right">Discrepancy Remarks</label>
                 <input
                   type="text"
                   placeholder="e.g. 5 units damaged"
-                  className="w-full border border-slate-200 rounded-lg p-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-xs outline-none focus:ring-2 focus:ring-blue-500 text-right"
                   value={remarks}
                   onChange={e => setRemarks(e.target.value)}
                 />
@@ -220,23 +235,35 @@ export const PRDetailModal = ({ pr, onClose }: Props) => {
             </div>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl border-2 border-dashed border-blue-200 shadow-sm text-center">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Scan Barcode to Authenticate & Finalize GRN</p>
-            <BarcodeScanner onScan={(code) => {
-              const expiry = (document.getElementById('grn-expiry') as HTMLInputElement)?.value;
-              handleAction('GRN Completed', {
-                actualDeliveryDate: Date.now(),
-                receivedQuantity: parseInt(extraFormData.receivedQty),
-                discrepancyRemarks: remarks,
-                barcode: code,
-                expiryDate: expiry,
-                notes: `GRN Finalized: ${extraFormData.receivedQty}/${pr.quantity} items receipted. Expiry: ${expiry || 'N/A'}. Discrepancy: ${remarks || 'None'}. Forwarded for workflow closure.`
-              });
-              if (pr.isAsset) {
-                setShowAssetReg(true);
-              }
-            }} />
-
+          <div className="bg-white p-6 rounded-2xl border-2 border-dashed border-blue-200 shadow-sm text-center">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 italic">
+              Verify physical documents and items before finalizing receipt
+            </p>
+            <button
+              disabled={!extraFormData.grnNumber}
+              onClick={() => {
+                const expiry = (document.getElementById('grn-expiry') as HTMLInputElement)?.value;
+                handleAction('GRN Completed', {
+                  actualDeliveryDate: Date.now(),
+                  receivedQuantity: parseInt(extraFormData.receivedQty),
+                  discrepancyRemarks: remarks,
+                  grnNumber: extraFormData.grnNumber,
+                  expiryDate: expiry,
+                  notes: `GRN Finalized (Ref: ${extraFormData.grnNumber}): ${extraFormData.receivedQty}/${pr.quantity} items receipted. Expiry: ${expiry || 'N/A'}. Discrepancy: ${remarks || 'None'}. Forwarded for workflow closure.`
+                });
+                if (pr.isAsset) {
+                  setShowAssetReg(true);
+                }
+              }}
+              className="w-full py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 text-xs font-black uppercase tracking-widest shadow-xl shadow-blue-200 transition-all disabled:opacity-40 disabled:grayscale flex items-center justify-center gap-3"
+            >
+              <Check className="w-5 h-5" /> Confirm & Finalize Receipt (GRN)
+            </button>
+            {!extraFormData.grnNumber && (
+              <p className="text-[9px] font-bold text-rose-500 mt-3 animate-pulse">
+                * ENTRY OF MANUAL GRN REFERENCE IS MANDATORY TO PROCEED
+              </p>
+            )}
           </div>
         </div>
       );
@@ -900,8 +927,8 @@ export const PRDetailModal = ({ pr, onClose }: Props) => {
                   room: assetForm.room,
                   status: 'Active',
                   condition: 'Good',
-                  movementHistory: [],
-                  breakdownHistory: []
+                  movementLogs: [],
+                  maintenanceLogs: []
                 };
                 registerAsset(newAsset);
                 updatePRStatus(pr.id, 'Asset Registered', 'Asset successfully tagged and registered in Asset Management module.');
@@ -980,6 +1007,12 @@ export const PRDetailModal = ({ pr, onClose }: Props) => {
                   {pr.actualDeliveryDate ? new Date(pr.actualDeliveryDate).toLocaleDateString() : 'Awaiting Receipt'}
                 </p>
               </div>
+              {pr.grnNumber && (
+                <div className="col-span-3 mt-4 pt-4 border-t border-blue-100/50 flex items-center justify-between">
+                  <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Manual GRN Reference</p>
+                  <p className="text-sm font-black text-blue-700 font-mono tracking-widest">{pr.grnNumber}</p>
+                </div>
+              )}
             </div>
           )}
 

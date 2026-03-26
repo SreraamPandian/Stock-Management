@@ -163,6 +163,7 @@ export interface PurchaseRequest {
   discrepancyRemarks?: string;
   isAuditLocked?: boolean;
   isAsset?: boolean;
+  grnNumber?: string;
 }
 
 export interface MaintenanceLog {
