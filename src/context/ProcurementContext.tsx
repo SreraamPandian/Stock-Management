@@ -1,6 +1,15 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { PurchaseRequest, Role, PRStatus, Tab, PRHistory, Priority, Asset } from '../types';
+import { PurchaseRequest, Role, PRStatus, Tab, PRHistory, Priority, Asset, Branch, Department, Brand, Category, MasterUser, MovementLog } from '../types';
 
+export type MaintenanceLog = {
+  id: string;
+  date: number;
+  type: 'PPM' | 'Calibration' | 'Repair' | 'Audit' | 'Update';
+  performer: string;
+  notes: string;
+  status: 'Pass' | 'Fail' | 'Pending';
+  nextDue?: number; // Added nextDue to MaintenanceLog type
+};
 
 interface ProcurementContextType {
   role: Role;
@@ -16,18 +25,39 @@ interface ProcurementContextType {
   getDeptBudget: (dept: string) => { approved: number, consumed: number };
   assets: Asset[];
   registerAsset: (asset: Asset) => void;
+  updateAsset: (asset: Asset) => void;
   updateAssetStatus: (id: string, status: Asset['status'], condition: Asset['condition']) => void;
   logMaintenance: (id: string, notes: string) => void;
   transferAsset: (id: string, floor: string, room: string) => void;
+  // Masters
+  branches: Branch[];
+  addBranch: (branch: Branch) => void;
+  updateBranch: (branch: Branch) => void;
+  deleteBranch: (id: string) => void;
+  departments: Department[];
+  addDepartment: (dept: Department) => void;
+  updateDepartment: (dept: Department) => void;
+  deleteDepartment: (id: string) => void;
+  brands: Brand[];
+  addBrand: (brand: Brand) => void;
+  updateBrand: (brand: Brand) => void;
+  deleteBrand: (id: string) => void;
+  categories: Category[];
+  addCategory: (cat: Category) => void;
+  updateCategory: (cat: Category) => void;
+  deleteCategory: (id: string) => void;
+  users: MasterUser[];
+  addUser: (user: MasterUser) => void;
+  updateUser: (user: MasterUser) => void;
+  deleteUser: (id: string) => void;
+  currentUserId: string;
 }
-
 
 const now = Date.now();
 const hour = 3600000;
 const day = 24 * hour;
 
 const initialState: PurchaseRequest[] = [
-  // ── BUR DUBAI PRs ──────────────────────────────
   {
     id: 'PR-2025-001', branch: 'Bur Dubai', department: 'Cardiology', category: 'Surgical Instruments',
     itemName: 'Scalpel Set #10', quantity: 50, requester: 'Dr. Ahmed', priority: 'Normal',
@@ -104,7 +134,6 @@ const initialState: PurchaseRequest[] = [
       { id: 'h23b', stage: 'Centre Approval', action: 'Rejected — Incomplete specification', timestamp: now - (4 * day), userRole: 'Centre In-Charge', rejectionReason: 'Item specification incomplete. Brand/generic not specified.' }
     ]
   },
-  // ── AL QUOZ PRs ──────────────────────────────
   {
     id: 'PR-2025-002', branch: 'Al Quoz', department: 'Emergency', category: 'Life Support Consumables',
     itemName: 'Ambu Bag Adult', quantity: 200, requester: 'Nurse Fatima', priority: 'Emergency',
@@ -182,7 +211,6 @@ const initialState: PurchaseRequest[] = [
       { id: 'h27b', stage: 'Centre Approval', action: 'Approved', timestamp: now - (day + 12 * hour), userRole: 'Centre In-Charge' }
     ]
   },
-  // ── OLDER PRs for Velocity Chart spread ──────────────────────────────
   {
     id: 'PR-2025-011', branch: 'Bur Dubai', department: 'Pharmacy', category: 'Medications',
     itemName: 'Amoxicillin 250mg x300', quantity: 300, requester: 'Pharm. Ali', priority: 'Normal',
@@ -227,6 +255,34 @@ const initialState: PurchaseRequest[] = [
   },
 ];
 
+const initialBranches: Branch[] = [
+  { id: 'BR-001', name: 'Bur Dubai', address: 'Sheikh Zayed Rd, Dubai', status: 'Active' },
+  { id: 'BR-002', name: 'Al Quoz', address: 'Industrial Area 3, Dubai', status: 'Active' },
+  { id: 'BR-003', name: 'Global', address: 'Logistics Hub, Jabel Ali', status: 'Active' }
+];
+
+const initialDepartments: Department[] = [
+  { id: 'DEPT-001', name: 'Cardiology', code: 'CARD', branch: 'Bur Dubai', head: 'Dr. Ahmed', status: 'Active' },
+  { id: 'DEPT-002', name: 'Emergency', code: 'ER', branch: 'Al Quoz', head: 'Nurse Fatima', status: 'Active' },
+  { id: 'DEPT-003', name: 'Pharmacy', code: 'PHRM', branch: 'Bur Dubai', head: 'Pharm. Ali', status: 'Active' },
+  { id: 'DEPT-004', name: 'Laboratory', code: 'LAB', branch: 'Bur Dubai', head: 'Tech Sarah', status: 'Active' },
+  { id: 'DEPT-005', name: 'ICU', code: 'ICU', branch: 'Bur Dubai', head: 'Dr. Hassan', status: 'Active' }
+];
+
+const initialBrands: Brand[] = [
+  { id: 'BND-001', name: 'MedTech Pro', manufacturer: 'MedTech UAE', type: 'Medical', status: 'Active' },
+  { id: 'BND-002', name: 'GE Healthcare', manufacturer: 'GE Global', type: 'Medical', status: 'Active' },
+  { id: 'BND-003', name: 'Dell Latitude', manufacturer: 'Dell Inc.', type: 'IT', status: 'Active' },
+  { id: 'BND-004', name: 'Philips Medical', manufacturer: 'Philips', type: 'Medical', status: 'Active' }
+];
+
+const initialCategories: Category[] = [
+  { id: 'CAT-001', name: 'Medical Equipment', prefix: 'ME', description: 'Critical healthcare machinery', status: 'Active' },
+  { id: 'CAT-002', name: 'IT Infrastructure', prefix: 'IT', description: 'Laptops, Servers, Networking', status: 'Active' },
+  { id: 'CAT-003', name: 'Hospital Furniture', prefix: 'HF', description: 'Beds, Chairs, Cabinets', status: 'Active' },
+  { id: 'CAT-004', name: 'Consumables', prefix: 'CON', description: 'Daily use medical supplies', status: 'Active' }
+];
+
 const deptBudgets: Record<string, { approved: number, consumed: number }> = {
   'Cardiology': { approved: 250000, consumed: 120000 },
   'Emergency': { approved: 500000, consumed: 410000 },
@@ -240,27 +296,44 @@ const deptBudgets: Record<string, { approved: number, consumed: number }> = {
   'ENT': { approved: 80000, consumed: 40000 }
 };
 
-const initialAssets: Asset[] = [
-  {
-    id: 'AST-2025-001', name: 'Ventilator V1', category: 'Medical', serialNo: 'SN-99283-X', brandModel: 'MedTech Pro 500',
-    prId: 'PR-2025-005', purchaseDate: now - (30 * day), price: 45000, vendor: 'MedSupply Co.',
-    warrantyStart: '2025-01-01', warrantyEnd: '2026-01-01', ppmSchedule: 'Quarterly',
-    nextServiceDue: now + (15 * day), isCalibrationRequired: true, nextCalibrationDue: now + (45 * day),
-    department: 'ICU', branch: 'Bur Dubai', assignedTo: 'Dr. Hassan', issuedDate: now - (25 * day),
-    floor: 'Floor 2', room: 'ICU-Room 4', status: 'Active', condition: 'Good',
-    movementHistory: [], breakdownHistory: []
-  },
-  {
-    id: 'AST-2025-002', name: 'Standard Dell Laptop', category: 'IT', serialNo: 'LT-7738-B', brandModel: 'Dell Latitude 5420',
-    prId: 'PR-2025-010', purchaseDate: now - (10 * day), price: 5200, vendor: 'IT Systems Dubai',
-    warrantyStart: '2025-02-15', warrantyEnd: '2028-02-15', ppmSchedule: 'Annual',
-    nextServiceDue: now + (200 * day), isCalibrationRequired: false,
-    department: 'Administration', branch: 'Al Quoz', assignedTo: 'Sarah Ali', issuedDate: now - (8 * day),
-    floor: 'Floor 1', room: 'Admin Office', status: 'Active', condition: 'Good',
-    movementHistory: [], breakdownHistory: []
-  }
+const initialUsers: MasterUser[] = [
+  { id: 'USR-001', name: 'Ahmed Khan', email: 'ahmed.k@probiz.ae', phone: '+971-52-111-2233', role: 'Sub Store Keeper', branch: 'Bur Dubai', status: 'Active', joined: '2024-01-15', lastLogin: '10 mins ago' },
+  { id: 'USR-002', name: 'Fatima Ali', email: 'fatima.a@probiz.ae', phone: '+971-55-977-8821', role: 'Centre In-Charge', branch: 'Bur Dubai', status: 'Active', joined: '2023-08-20', lastLogin: '2h ago' },
+  { id: 'USR-003', name: 'Sarah Smith', email: 'sarah.s@probiz.ae', phone: '+971-54-212-3344', role: 'Sub Store Keeper', branch: 'Al Quoz', status: 'Active', joined: '2024-03-10', lastLogin: '5h ago' },
+  { id: 'USR-004', name: 'Dr. Hassan', email: 'hassan.d@probiz.ae', phone: '+971-50-445-6677', role: 'Centre In-Charge', branch: 'Al Quoz', status: 'Active', joined: '2022-12-05', lastLogin: '1d ago' },
+  { id: 'USR-005', name: 'Omar Farooq', email: 'omar.f@probiz.ae', phone: '+971-52-889-0011', role: 'Central Store', branch: 'Global', status: 'Active', joined: '2023-04-18', lastLogin: '30 mins ago' },
+  { id: 'USR-006', name: 'Aisha Rahman', email: 'aisha.r@probiz.ae', phone: '+971-55-321-4455', role: 'Procurement Officer', branch: 'Global', status: 'Active', joined: '2023-09-01', lastLogin: '15 mins ago' },
+  { id: 'USR-007', name: 'John Doe', email: 'john.d@probiz.ae', phone: '+971-50-777-8899', role: 'SMD', branch: 'Global', status: 'Active', joined: '2021-06-15', lastLogin: '3h ago' },
+  { id: 'USR-008', name: 'Jane Roe', email: 'jane.r@probiz.ae', phone: '+971-54-654-3322', role: 'Finance', branch: 'Global', status: 'On Leave', joined: '2022-02-28', lastLogin: '3 days ago' },
+  { id: 'USR-009', name: 'Zayed Mansoor', email: 'zayed.m@probiz.ae', phone: '+971-52-123-9988', role: 'SMD', branch: 'Global', status: 'Active', joined: '2020-11-10', lastLogin: 'Just now' },
+  { id: 'USR-010', name: 'Maya Jamila', email: 'maya.j@probiz.ae', phone: '+971-55-567-4433', role: 'Finance', branch: 'Global', status: 'Active', joined: '2023-07-22', lastLogin: '4h ago' }
 ];
 
+const initialAssets: Asset[] = [
+  {
+    id: 'AST-2025-001', tagNumber: 'TAG-55293', name: 'Ventilator V1', category: 'Medical', serialNo: 'SN-99283-X', brandModel: 'MedTech Pro 500', manufacturerRef: 'MFR-GE-001',
+    prId: 'PR-2025-005', purchaseDate: now - (30 * day), invoiceRef: 'INV-2025-9923', price: 45000, vendor: 'MedSupply Co.',
+    warrantyStart: '2025-01-01', startDate: '2025-01-01', warrantyEnd: '2026-01-01', alertBeforeExpiry: 30, ppmSchedule: 'Quarterly',
+    nextServiceDue: now + (15 * day), isCalibrationRequired: true, nextCalibrationDue: now + (45 * day),
+    assetOwner: 'ICU', department: 'Dr. Hassan', branch: 'Bur Dubai', assignedTo: 'Dr. Hassan', issuedBy: 'Admin', issuedDate: now - (25 * day),
+    floor: 'Floor 2', buildingWing: 'Main Wing', room: 'ICU-Room 4', status: 'Active', condition: 'Good', dhaAuditFocus: true,
+    maintenanceLogs: [
+      { id: 'm1', date: now - (90 * day), type: 'PPM', performer: 'Biomed Tech', notes: 'Scheduled checkup, filters replaced.', status: 'Pass', nextDue: now + (15 * day) }
+    ],
+    movementLogs: [
+      { id: 'mv1', date: now - (60 * day), fromLocation: 'Store B', toLocation: 'ICU-Room 4', movedBy: 'Sub Store Keeper', reason: 'Emergency requirement' }
+    ]
+  },
+  {
+    id: 'AST-2025-002', tagNumber: 'TAG-77382', name: 'Standard Dell Laptop', category: 'IT', serialNo: 'LT-7738-B', brandModel: 'Dell Latitude 5420', manufacturerRef: 'MFR-DELL-5420',
+    prId: 'PR-2025-010', purchaseDate: now - (10 * day), invoiceRef: 'INV-2025-4421', price: 5200, vendor: 'IT Systems Dubai',
+    warrantyStart: '2025-02-15', startDate: '2025-02-15', warrantyEnd: '2028-02-15', alertBeforeExpiry: 90, ppmSchedule: 'Annual',
+    nextServiceDue: now + (200 * day), isCalibrationRequired: false,
+    assetOwner: 'Administration', department: 'Sarah Ali', branch: 'Al Quoz', assignedTo: 'Ahmed Khan', issuedBy: 'IT Manager', issuedDate: now - (8 * day),
+    floor: 'Floor 1', buildingWing: 'Al Quoz Hub', room: 'Admin Office', status: 'Active', condition: 'Good', dhaAuditFocus: false,
+    maintenanceLogs: [], movementLogs: []
+  }
+];
 
 const ProcurementContext = createContext<ProcurementContextType | undefined>(undefined);
 
@@ -279,207 +352,124 @@ export const ProcurementProvider = ({ children }: { children: ReactNode }) => {
       const saved = localStorage.getItem('procurement_prs');
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Version guard: if stored data is old/sparse (< 15 PRs), reload fresh initialState
         if (Array.isArray(parsed) && parsed.length >= 15) return parsed;
       }
-    } catch { /* ignore parse errors */ }
+    } catch { }
     return initialState;
   });
 
   const [assets, setAssets] = useState<Asset[]>(() => {
     try {
       const saved = localStorage.getItem('procurement_assets');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          // SANITIZE: Ensure logs are always arrays even if loaded from older versions
+          return parsed.map((a: any) => ({
+            ...a,
+            maintenanceLogs: a.maintenanceLogs || [],
+            movementLogs: a.movementLogs || []
+          }));
+        }
+      }
     } catch { }
     return initialAssets;
   });
 
+  const [branches, setBranches] = useState<Branch[]>(() => {
+    try {
+      const saved = localStorage.getItem('master_branches');
+      if (saved) return JSON.parse(saved);
+    } catch { }
+    return initialBranches;
+  });
 
-  useEffect(() => {
-    localStorage.setItem('procurement_prs', JSON.stringify(prs));
-  }, [prs]);
+  const [departments, setDepartments] = useState<Department[]>(() => {
+    try {
+      const saved = localStorage.getItem('master_departments');
+      if (saved) return JSON.parse(saved);
+    } catch { }
+    return initialDepartments;
+  });
+
+  const [brands, setBrands] = useState<Brand[]>(() => {
+    try {
+      const saved = localStorage.getItem('master_brands');
+      if (saved) return JSON.parse(saved);
+    } catch { }
+    return initialBrands;
+  });
+
+  const [categories, setCategories] = useState<Category[]>(() => {
+    try {
+      const saved = localStorage.getItem('master_categories');
+      if (saved) return JSON.parse(saved);
+    } catch { }
+    return initialCategories;
+  });
+
+  const [users, setUsers] = useState<MasterUser[]>(() => {
+    try {
+      const saved = localStorage.getItem('master_users');
+      if (saved) return JSON.parse(saved);
+    } catch { }
+    return initialUsers;
+  });
 
   useEffect(() => {
     localStorage.setItem('procurement_role', role);
-  }, [role]);
-
-  useEffect(() => {
     localStorage.setItem('procurement_branch', branch);
-  }, [branch]);
-
-  useEffect(() => {
+    localStorage.setItem('procurement_prs', JSON.stringify(prs));
     localStorage.setItem('procurement_assets', JSON.stringify(assets));
-  }, [assets]);
+    localStorage.setItem('master_branches', JSON.stringify(branches));
+    localStorage.setItem('master_departments', JSON.stringify(departments));
+    localStorage.setItem('master_brands', JSON.stringify(brands));
+    localStorage.setItem('master_categories', JSON.stringify(categories));
+    localStorage.setItem('master_users', JSON.stringify(users));
+  }, [role, branch, prs, assets, branches, departments, brands, categories, users]);
 
-
-  useEffect(() => {
-    const checkEscalations = () => {
-      prs.forEach(pr => {
-        // SMD Role Specific Escalations
-        if (pr.status === 'Pending - SMD' && pr.smdActionDeadline && Date.now() > pr.smdActionDeadline) {
-          console.warn(`SMD SLA BREACH: ${pr.id} (${pr.priority}). Immediate Alert triggered!`);
-        }
-
-        // Finance Role Specific Escalations (1 Day TAT)
-        if (pr.status === 'Pending - Finance' && pr.financeActionDeadline && Date.now() > pr.financeActionDeadline) {
-          console.warn(`FINANCE SLA BREACH: ${pr.id}. Escalation alert sent to SMD.`);
-        }
-
-        // General TAT Escalations
-        if ((pr.status === 'Pending - Centre In-Charge' && (Date.now() - pr.createdAt > day)) ||
-          (Date.now() > pr.slaDeadline && pr.status !== 'Closed - Completed' && !pr.status.includes('Rejected'))) {
-          console.warn(`SYSTEM ALERT: ${pr.id} TAT/SLA breach detected.`);
-        }
-      });
-    };
-    const timer = setInterval(checkEscalations, 60000);
-    checkEscalations();
-    return () => clearInterval(timer);
-  }, [prs]);
-
-  const calculateSLA = (priority: Priority) => {
-    const map = {
-      'Emergency': 2 * day,
-      'High': 4 * day,
-      'Medium': 7 * day,
-      'Normal': 10 * day
-    };
-    return Date.now() + map[priority];
+  const addPR = (pr: any) => setPrs([pr, ...prs]);
+  const updatePRStatus = (id: string, newStatus: PRStatus, notes?: string, extraData?: Partial<PurchaseRequest>) => {
+    setPrs(current => current.map(pr => pr.id === id ? {
+      ...pr,
+      status: newStatus,
+      ...extraData,
+      history: [...pr.history, { id: Math.random().toString(36).substr(2, 9), stage: newStatus, action: 'Status Updated', timestamp: Date.now(), userRole: role, notes }]
+    } : pr));
   };
 
-  const calculateSmdDeadline = (priority: Priority) => {
-    const map = {
-      'Emergency': 4 * hour,
-      'High': 1 * day,
-      'Medium': 2 * day,
-      'Normal': 3 * day
-    };
-    return Date.now() + map[priority];
+  const extendTAT = (id: string, additionalHours: number, reason: string, revisedDate?: number) => {
+    setPrs(current => current.map(pr => pr.id === id ? {
+      ...pr,
+      slaDeadline: revisedDate || (pr.slaDeadline + additionalHours * hour),
+      history: [...pr.history, { id: Math.random().toString(36).substr(2, 9), stage: pr.status, action: 'TAT Extended', timestamp: Date.now(), userRole: role, notes: `Reason: ${reason}` }]
+    } : pr));
   };
 
   const getDeptBudget = (dept: string) => deptBudgets[dept] || { approved: 0, consumed: 0 };
 
-  const addPR = (prData: any) => {
-    const newPR: PurchaseRequest = {
-      ...prData,
-      id: `PR-${new Date().getFullYear()}-${String(prs.length + 1).padStart(3, '0')}`,
-      createdAt: Date.now(),
-      slaDeadline: calculateSLA(prData.priority || 'Normal'),
-      smdApproved: false,
-      isLocked: false,
-      history: [{
-        id: Math.random().toString(36).substr(2, 9),
-        stage: 'Initiation',
-        action: prData.status === 'Closed - Completed' ? 'Issued' : 'Raised PR',
-        timestamp: Date.now(),
-        userRole: role,
-        notes: prData.notes || 'Requirement entered into system.'
-      }]
-    };
-    setPrs([newPR, ...prs]);
-    setActiveTab('Dashboard');
-  };
-
-  const updatePRStatus = (id: string, newStatus: PRStatus, notes?: string, extraData?: Partial<PurchaseRequest>) => {
-    setPrs(currentPrs => currentPrs.map(pr => {
-      if (pr.id === id) {
-        if (pr.isAuditLocked) return pr;
-
-        const stage = newStatus.split(' - ')[0] || newStatus;
-        let action = newStatus.includes('Rejected')
-          ? 'Rejected'
-          : (newStatus.includes('Pending') && pr.status.includes('Rejected'))
-            ? 'Re-submitted'
-            : newStatus === 'Dispatched'
-              ? 'Consumables Dispatched'
-              : newStatus === 'Dispatch Scheduled'
-                ? 'Scheduled for Dispatch'
-                : newStatus === 'Closed - Completed'
-                  ? 'Workflow Finalized'
-                  : 'Approved/Forwarded';
-
-        let newSlaDeadline = pr.slaDeadline;
-        let newSmdActionDeadline = pr.smdActionDeadline;
-        let newFinanceActionDeadline = pr.financeActionDeadline;
-
-        if (extraData?.priority && extraData.priority !== pr.priority) {
-          newSlaDeadline = calculateSLA(extraData.priority);
-          action = `Priority Updated to ${extraData.priority}`;
-        }
-
-        if (newStatus === 'Pending - SMD') {
-          newSmdActionDeadline = calculateSmdDeadline(extraData?.priority || pr.priority);
-        }
-
-        if (newStatus === 'Pending - Finance') {
-          newFinanceActionDeadline = Date.now() + day; // 1 Day TAT
-        }
-
-        const newHistoryItem: PRHistory = {
-          id: Math.random().toString(36).substr(2, 9),
-          stage,
-          action,
-          timestamp: Date.now(),
-          userRole: role,
-          notes,
-          rejectionReason: (extraData as any)?.rejectionReason
-        };
-
-        if (newStatus === 'Closed - Completed') {
-          console.log(`WORKFLOW CLOSURE: Notifications sent to SMD, Finance, Procurement, and Department.`);
-        }
-
-        if (extraData?.receivedQuantity !== undefined && extraData.receivedQuantity < pr.quantity) {
-          console.error(`GRN DISCREPANCY: PR ${pr.id} shortfall detected. Alerts triggered for Procurement.`);
-        }
-
-        return {
-          ...pr,
-          status: newStatus,
-          history: [...pr.history, newHistoryItem],
-          smdApproved: role === 'SMD' && (newStatus === 'Pending - Finance' || newStatus === 'PO Issued') ? true : pr.smdApproved,
-          isLocked: role === 'SMD' && (newStatus === 'Pending - Finance' || newStatus === 'PO Issued') ? true : pr.isLocked,
-          isAuditLocked: newStatus === 'Closed - Completed' ? true : pr.isAuditLocked,
-          isReserved: newStatus === 'Dispatched' || newStatus === 'In Transit' ? true : pr.isReserved,
-          slaDeadline: newSlaDeadline,
-          smdActionDeadline: newSmdActionDeadline,
-          financeActionDeadline: newFinanceActionDeadline,
-          smdActionTimestamp: role === 'SMD' ? Date.now() : pr.smdActionTimestamp,
-          ...extraData
-        };
-      }
-      return pr;
-    }));
-  };
-
-  const extendTAT = (id: string, additionalHours: number, reason: string, revisedDate?: number) => {
-    setPrs(currentPrs => currentPrs.map(pr => {
-      if (pr.id === id) {
-        const newHistoryItem: PRHistory = {
-          id: Math.random().toString(36).substr(2, 9),
-          stage: 'TAT Extension',
-          action: 'Extended SLA',
-          timestamp: Date.now(),
-          userRole: role,
-          notes: `Extended by ${additionalHours}h. Reason: ${reason}`
-        };
-
-        return {
-          ...pr,
-          slaDeadline: revisedDate || pr.slaDeadline + (additionalHours * hour),
-          history: [...pr.history, newHistoryItem],
-          isTATExtended: true,
-          revisedDeliveryDate: revisedDate
-        };
-      }
-      return pr;
-    }));
-  };
-
-  const registerAsset = (asset: Asset) => {
-    setAssets(current => [asset, ...current]);
-  };
+  const registerAsset = (asset: Asset) => setAssets(current => [asset, ...current]);
   
+  const updateAsset = (updated: Asset) => {
+    setAssets(current => current.map(a => {
+      if (a.id === updated.id) {
+        // Log the change if it's significant
+        const log: MaintenanceLog = {
+          id: Math.random().toString(36).substr(2, 9),
+          date: Date.now(),
+          type: 'Update',
+          performer: role,
+          notes: 'Asset record updated via Maintenance module',
+          status: 'Pass'
+        };
+        return { 
+          ...updated, 
+          maintenanceLogs: [...(updated.maintenanceLogs || []), log] 
+        };
+      }
+      return a;
+    }));
+  };
   const updateAssetStatus = (id: string, status: Asset['status'], condition: Asset['condition']) => {
     setAssets(current => current.map(a => a.id === id ? { ...a, status, condition } : a));
   };
@@ -489,16 +479,20 @@ export const ProcurementProvider = ({ children }: { children: ReactNode }) => {
       if (a.id === id) {
         const intervalMap = { 'Monthly': 30, 'Quarterly': 90, 'Bi-Annual': 180, 'Annual': 365 };
         const days = intervalMap[a.ppmSchedule] || 90;
+        const newLog: MaintenanceLog = {
+          id: Math.random().toString(36).substr(2, 9),
+          date: Date.now(),
+          type: 'PPM',
+          performer: role,
+          notes,
+          status: 'Pass',
+          nextDue: Date.now() + (days * 24 * 3600000)
+        };
         return {
           ...a,
-          nextServiceDue: Date.now() + (days * 24 * 3600000),
+          nextServiceDue: newLog.nextDue!,
           lastServiceDate: Date.now(),
-          breakdownHistory: [...a.breakdownHistory, {
-            date: Date.now(),
-            issue: `Scheduled Maintenance: ${notes}`,
-            resolvedDate: Date.now(),
-            cost: 0
-          }]
+          maintenanceLogs: [...a.maintenanceLogs, newLog]
         };
       }
       return a;
@@ -508,28 +502,54 @@ export const ProcurementProvider = ({ children }: { children: ReactNode }) => {
   const transferAsset = (id: string, floor: string, room: string) => {
     setAssets(current => current.map(a => {
       if (a.id === id) {
-        return {
-          ...a,
-          floor,
-          room,
-          movementHistory: [...a.movementHistory, {
-            date: Date.now(),
-            from: `${a.floor} - ${a.room}`,
-            to: `${floor} - ${room}`,
-            movedBy: role
-          }]
+        const newLog: MovementLog = {
+          id: Math.random().toString(36).substr(2, 9),
+          date: Date.now(),
+          fromLocation: `${a.floor} - ${a.room}`,
+          toLocation: `${floor} - ${room}`,
+          movedBy: role,
+          reason: 'Manual Transfer'
         };
+        return { ...a, floor, room, movementLogs: [...a.movementLogs, newLog] };
       }
       return a;
     }));
   };
 
+  const addBranch = (b: Branch) => setBranches([b, ...branches]);
+  const updateBranch = (b: Branch) => setBranches(current => current.map(item => item.id === b.id ? b : item));
+  const deleteBranch = (id: string) => setBranches(current => current.filter(item => item.id !== id));
+
+  const addDepartment = (d: Department) => setDepartments([d, ...departments]);
+  const updateDepartment = (d: Department) => setDepartments(current => current.map(item => item.id === d.id ? d : item));
+  const deleteDepartment = (id: string) => setDepartments(current => current.filter(item => item.id !== id));
+
+  const addBrand = (b: Brand) => setBrands([b, ...brands]);
+  const updateBrand = (b: Brand) => setBrands(current => current.map(item => item.id === b.id ? b : item));
+  const deleteBrand = (id: string) => setBrands(current => current.filter(item => item.id !== id));
+
+  const addCategory = (c: Category) => setCategories([c, ...categories]);
+  const updateCategory = (c: Category) => setCategories(current => current.map(item => item.id === c.id ? c : item));
+  const deleteCategory = (id: string) => setCategories(current => current.filter(item => item.id !== id));
+
+  const addUser = (u: MasterUser) => setUsers([u, ...users]);
+  const updateUser = (u: MasterUser) => setUsers(current => current.map(item => item.id === u.id ? u : item));
+  const deleteUser = (id: string) => setUsers(current => current.filter(item => item.id !== id));
+
+  const currentUserId = role === 'Super Admin' ? 'USR-001' : 
+                        role === 'Centre In-Charge' ? 'USR-002' : 'USR-003';
+
   return (
     <ProcurementContext.Provider value={{ 
       role, setRole, branch, setBranch, activeTab, setActiveTab, prs, addPR, updatePRStatus, extendTAT, getDeptBudget, 
-      assets, registerAsset, updateAssetStatus, logMaintenance, transferAsset 
+      assets, registerAsset, updateAsset, updateAssetStatus, logMaintenance, transferAsset,
+      branches, addBranch, updateBranch, deleteBranch,
+      departments, addDepartment, updateDepartment, deleteDepartment,
+      brands, addBrand, updateBrand, deleteBrand,
+      categories, addCategory, updateCategory, deleteCategory,
+      users, addUser, updateUser, deleteUser,
+      currentUserId
     }}>
-
       {children}
     </ProcurementContext.Provider>
   );

@@ -12,6 +12,12 @@ import { LoginPage } from './components/auth/LoginPage';
 import { ApprovalQueueView } from './components/views/ApprovalQueueView';
 import { PurchaseOrderView } from './components/views/PurchaseOrderView';
 import { AssetManagementView } from './components/views/AssetManagementView';
+import { BranchMasterView } from './components/views/masters/BranchMasterView';
+import { DepartmentMasterView } from './components/views/masters/DepartmentMasterView';
+import { BrandMasterView } from './components/views/masters/BrandMasterView';
+import { CategoryMasterView } from './components/views/masters/CategoryMasterView';
+import { MaintenanceComplianceView } from './components/views/assets/MaintenanceComplianceView';
+import { AssetReportsView } from './components/views/assets/AssetReportsView';
 
 
 const AppContent = () => {
@@ -100,7 +106,20 @@ const AppContent = () => {
       case 'Purchase Order':
         return <PurchaseOrderView />;
       case 'Asset Management':
+      case 'Asset':
         return <AssetManagementView />;
+      case 'Maintenance & Compliance':
+        return <MaintenanceComplianceView />;
+      case 'Asset Reports':
+        return <AssetReportsView />;
+      case 'Branch Master':
+        return <BranchMasterView />;
+      case 'Department Master':
+        return <DepartmentMasterView />;
+      case 'Brand Master':
+        return <BrandMasterView />;
+      case 'Category Master':
+        return <CategoryMasterView />;
       default:
 
         return <Dashboard />;

@@ -32,9 +32,55 @@ export type AssetStatus = 'Active' | 'Under Maintenance' | 'Down' | 'Disposed';
 export type AssetCondition = 'Good' | 'Fair' | 'Poor';
 
 
-export type Tab = 'Dashboard' | 'PR Entry' | 'Stock' | 'Analytics' | 'Admin' | 'Store Management' | 'User Management' | 'Purchase Order' | 'Asset Management';
+export type Tab = 
+  | 'Dashboard' 
+  | 'PR Entry' 
+  | 'Stock' 
+  | 'Analytics' 
+  | 'Admin' 
+  | 'Store Management' 
+  | 'User Management' 
+  | 'Purchase Order' 
+  | 'Asset Management'
+  | 'Asset'
+  | 'Maintenance & Compliance'
+  | 'Asset Reports'
+  | 'Branch Master'
+  | 'Department Master'
+  | 'Brand Master'
+  | 'Category Master';
 
+export interface Branch {
+  id: string;
+  name: string;
+  address: string;
+  status: 'Active' | 'Inactive';
+}
 
+export interface Department {
+  id: string;
+  name: string;
+  code: string;
+  branch: string;
+  head: string;
+  status: 'Active' | 'Inactive';
+}
+
+export interface Brand {
+  id: string;
+  name: string;
+  manufacturer: string;
+  type: string;
+  status: 'Active' | 'Inactive';
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  prefix: string;
+  description: string;
+  status: 'Active' | 'Inactive';
+}
 
 export interface Store {
   id: string;
@@ -119,40 +165,76 @@ export interface PurchaseRequest {
   isAsset?: boolean;
 }
 
+export interface MaintenanceLog {
+  id: string;
+  date: number;
+  type: 'PPM' | 'Calibration' | 'Repair' | 'Audit';
+  performer: string;
+  notes: string;
+  status: 'Pass' | 'Fail' | 'Pending';
+  nextDue?: number;
+}
+
+export interface MovementLog {
+  id: string;
+  date: number;
+  fromLocation: string;
+  toLocation: string;
+  movedBy: string;
+  reason: string;
+}
+
 export interface Asset {
-  id: string; // Asset ID / Tag
+  id: string; // Asset ID
+  tagNumber: string; // Unique tag number
   name: string;
   category: AssetCategory;
   serialNo: string;
   brandModel: string;
+  manufacturerRef: string;
   
   // Procurement Link
   prId: string;
   purchaseDate: number;
+  invoiceRef: string;
   price: number;
   vendor: string;
+  documentUrl?: string; // Step 2 upload
   
   // Warranty & Compliance
   warrantyStart: string;
+  startDate: string; // Added start date for warranty
   warrantyEnd: string;
+  alertBeforeExpiry: number; // Days
   ppmSchedule: 'Monthly' | 'Quarterly' | 'Bi-Annual' | 'Annual';
   lastServiceDate?: number;
   nextServiceDue: number;
   isCalibrationRequired: boolean;
   lastCalibrationDate?: number;
   nextCalibrationDue?: number;
+
+  // DHA & Maintenance (Step 6)
+  dhaAuditFocus: boolean;
+  amcVendor?: string;
+  serviceProvider?: string;
+  maintenanceLogs: MaintenanceLog[];
+  movementLogs: MovementLog[];
   
   // Ownership & Assignment
-  department: string;
-  branch: string;
+  assetOwner: string; // Dept / center
+  department: string; // Employee / dept
+  branch: string; // Added back for compatibility
   assignedTo: string;
   issuedDate: number;
+  issuedBy: string;
   returnDate?: number;
   
   // Location
   floor: string;
+  buildingWing: string;
   room: string;
   exactLocation?: string;
+  rackCorner?: string;
   
   // Status
   status: AssetStatus;
@@ -162,9 +244,5 @@ export interface Asset {
   manualUrl?: string;
   warrantyUrl?: string;
   calibrationCertUrl?: string;
-  
-  // History is handled separately or as a sub-array
-  movementHistory: { date: number, from: string, to: string, movedBy: string }[];
-  breakdownHistory: { date: number, issue: string, resolvedDate?: number, cost?: number }[];
 }
 

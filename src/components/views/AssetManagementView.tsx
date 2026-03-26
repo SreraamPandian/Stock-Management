@@ -1,14 +1,11 @@
 import { useState } from 'react';
 import { useProcurement } from '../../context/ProcurementContext';
-import { Asset, AssetStatus, AssetCategory } from '../../types';
+import { Asset, AssetStatus, AssetCategory, AssetCondition } from '../../types';
 import { 
   ShieldCheck, 
   Search, 
   Plus, 
-  Filter, 
-  MoreHorizontal, 
   MapPin, 
-  Clock, 
   Wrench, 
   FileText, 
   AlertTriangle,
@@ -21,22 +18,62 @@ import {
 import { format } from 'date-fns';
 
 export const AssetManagementView = () => {
-  const { assets, role, registerAsset, logMaintenance, transferAsset, updateAssetStatus, branch } = useProcurement();
+  const { 
+    assets, role, registerAsset, logMaintenance, 
+    transferAsset, updateAssetStatus, branch,
+    branches, departments, brands, categories, users 
+  } = useProcurement();
   const [search, setSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState<AssetCategory | 'All'>('All');
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [showManualReg, setShowManualReg] = useState(false);
-  const [assetForm, setAssetForm] = useState({
-    name: '',
-    category: 'Medical' as AssetCategory,
-    serialNo: '',
-    brandModel: '',
-    floor: '',
-    room: '',
-    assignedTo: '',
-    ppmSchedule: 'Quarterly' as const,
-    isCalibrationRequired: false
-  });
+  const [formStep, setFormStep] = useState(1);
+  const initialFormState = {
+    // Step 1: Identification
+    id: '', tagNumber: '', name: '', brandModel: '', category: 'Medical' as AssetCategory, 
+    type: 'Medical', serialNo: '', manufacturerRef: '',
+    
+    // Step 2: Procurement & Warranty
+    purchaseDate: format(new Date(), 'yyyy-MM-dd'), invoiceRef: '',
+    warrantyStart: format(new Date(), 'yyyy-MM-dd'), startDate: format(new Date(), 'yyyy-MM-dd'),
+    warrantyEnd: format(new Date(Date.now() + 365 * 86400000), 'yyyy-MM-dd'),
+    alertBeforeExpiry: 30,
+    
+    // Step 3: Ownership & Assignment
+    assetOwner: '', department: '', branch: '', assignedTo: '', issuedDate: format(new Date(), 'yyyy-MM-dd'),
+    issuedBy: role, returnDate: '',
+    
+    // Step 4: Location
+    floor: '', buildingWing: '', room: '', exactLocation: '', rackCorner: '',
+    
+    // Step 5: Status & Condition
+    status: 'Active' as AssetStatus,
+    condition: 'Good' as AssetCondition,
+    
+    // Step 6: Maintenance & Compliance
+    dhaAuditFocus: false,
+    ppmSchedule: 'Quarterly' as 'Monthly' | 'Quarterly' | 'Bi-Annual' | 'Annual',
+    lastServiceDate: '',
+    nextServiceDue: '',
+    isCalibrationRequired: false,
+    amcVendor: '',
+    serviceProvider: '',
+    
+    documentUrl: ''
+  };
+
+  const [assetForm, setAssetForm] = useState(initialFormState);
+
+  const generateIdentifiers = () => {
+    const year = new Date().getFullYear();
+    const random = Math.floor(1000 + Math.random() * 9000);
+    const tag = Math.floor(100000 + Math.random() * 900000);
+    setAssetForm(prev => ({
+      ...prev,
+      id: `AST-${year}-${random}`,
+      tagNumber: `TAG-${tag}`
+    }));
+  };
 
   const filteredAssets = assets.filter(asset => {
     const matchesSearch = asset.name.toLowerCase().includes(search.toLowerCase()) || 
@@ -79,7 +116,10 @@ export const AssetManagementView = () => {
             />
           </div>
           <button 
-            onClick={() => setShowManualReg(true)}
+            onClick={() => {
+              generateIdentifiers();
+              setShowManualReg(true);
+            }}
             className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 font-bold text-xs uppercase tracking-widest"
           >
             <Plus className="w-4 h-4" /> Register Asset
@@ -105,9 +145,9 @@ export const AssetManagementView = () => {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+      <div className="grid grid-cols-1 gap-8 items-start">
         {/* Main Asset List */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="space-y-6">
           <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
             <div className="p-6 border-b border-slate-50 flex justify-between items-center">
               <h2 className="text-xs font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
@@ -160,7 +200,7 @@ export const AssetManagementView = () => {
                       </td>
                       <td className="p-5">
                         <div className="flex items-center gap-1.5 text-xs font-bold text-slate-600">
-                          <MapPin className="w-3.5 h-3.5 text-blue-400" /> {asset.branch}
+                          <MapPin className="w-3.5 h-3.5 text-blue-400" /> {asset.assetOwner}
                         </div>
                         <p className="text-[10px] text-slate-400 font-medium mt-0.5">{asset.floor} • {asset.room}</p>
                       </td>
@@ -183,55 +223,6 @@ export const AssetManagementView = () => {
                   ))}
                 </tbody>
               </table>
-            </div>
-          </div>
-        </div>
-
-        {/* Sidebar Panel - Maintenance & Detail */}
-        <div className="space-y-6">
-          <div className="bg-slate-900 text-white p-8 rounded-2xl shadow-xl relative overflow-hidden group">
-            <div className="relative z-10">
-              <h3 className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <Wrench className="w-4 h-4" /> Maintenance Alerts
-              </h3>
-              <div className="space-y-4">
-                {assets.slice(0, 3).map((a, i) => (
-                  <div key={i} className="flex gap-4 p-3 rounded-xl hover:bg-white/5 transition-colors border border-transparent hover:border-white/10">
-                    <div className="w-1.5 h-10 rounded-full bg-blue-500 shrink-0"></div>
-                    <div>
-                      <p className="text-[11px] font-black text-slate-100 uppercase">{a.name}</p>
-                      <p className="text-[10px] text-slate-500 font-bold mt-0.5">Next PPM: {format(a.nextServiceDue, 'dd MMM yyyy')}</p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className="text-[8px] font-black bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded uppercase tracking-tighter">
-                          {Math.ceil((a.nextServiceDue - Date.now()) / 86400000)} Days Remaining
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-blue-600/20 rounded-full blur-3xl group-hover:bg-blue-600/30 transition-all duration-700"></div>
-          </div>
-
-          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-50 pb-2 flex items-center gap-2">
-              <History className="w-4 h-4 text-blue-500" /> Recent Asset Movement
-            </h3>
-            <div className="space-y-6">
-              {[
-                { name: 'X-Ray Machine', from: 'Room 201', to: 'Diagnostic', user: 'Admin' },
-                { name: 'Patient Monitor', from: 'Store B', to: 'ICU-Room 1', user: 'Tech' },
-              ].map((log, i) => (
-                <div key={i} className="flex gap-4">
-                  <div className="w-1.5 h-10 rounded-full bg-slate-100 shrink-0"></div>
-                  <div>
-                    <p className="text-[11px] font-black text-slate-700 uppercase">{log.name}</p>
-                    <p className="text-[10px] text-slate-400 font-bold mt-0.5">{log.from} → {log.to}</p>
-                    <p className="text-[9px] text-blue-500 font-black mt-1 uppercase tracking-tighter">Moved by {log.user}</p>
-                  </div>
-                </div>
-              ))}
             </div>
           </div>
         </div>
@@ -344,6 +335,10 @@ export const AssetManagementView = () => {
                         <p className="text-xs font-bold text-blue-700">{selectedAsset.department}</p>
                       </div>
                     </div>
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                       <p className="text-[9px] font-bold text-slate-400 uppercase">Issued Date</p>
+                       <p className="text-xs font-black text-slate-800">{format(selectedAsset.issuedDate, 'dd MMM yyyy')}</p>
+                    </div>
                   </div>
                 </div>
 
@@ -355,18 +350,66 @@ export const AssetManagementView = () => {
                   </h4>
                   <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200">
                     <div className="flex justify-between items-center mb-4">
-                       <span className="text-[10px] font-black text-amber-800 uppercase tracking-widest">PPM Schedule: {selectedAsset.ppmSchedule}</span>
+                       <span className={`text-[10px] font-black px-2 py-0.5 rounded ${selectedAsset.dhaAuditFocus ? 'bg-rose-500 text-white' : 'bg-amber-100 text-amber-800'} uppercase tracking-widest`}>
+                        {selectedAsset.dhaAuditFocus ? 'DHA AUDIT FOCUS' : `PPM: ${selectedAsset.ppmSchedule}`}
+                       </span>
                        <Wrench className="w-4 h-4 text-amber-600" />
                     </div>
-                    <div className="flex justify-between">
+                    <div className="grid grid-cols-2 gap-2 mb-4">
                       <div className="text-center bg-white px-3 py-2 rounded-xl border border-amber-100">
                         <p className="text-[8px] font-black text-slate-400 uppercase">Last Service</p>
-                        <p className="text-[10px] font-bold text-slate-700">None</p>
+                        <p className="text-[10px] font-bold text-slate-700">{selectedAsset.lastServiceDate ? format(selectedAsset.lastServiceDate, 'dd MMM yy') : 'N/A'}</p>
                       </div>
                       <div className="text-center bg-white px-3 py-2 rounded-xl border border-amber-500 shadow-lg shadow-amber-100">
                         <p className="text-[8px] font-black text-amber-400 uppercase">Next Due</p>
                         <p className="text-[10px] font-black text-amber-600 font-mono italic">{format(selectedAsset.nextServiceDue, 'dd MMM yy')}</p>
                       </div>
+                    </div>
+                    {selectedAsset.isCalibrationRequired && (
+                      <div className="mt-2 p-2 bg-white rounded-lg border border-emerald-100 flex justify-between items-center">
+                        <span className="text-[9px] font-black text-emerald-600 uppercase">Calibration Required</span>
+                        <Zap className="w-3 h-3 text-emerald-500" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* History Tabs Section */}
+              <div className="space-y-4">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                  <History className="w-4 h-4 text-blue-500" />
+                  Asset Lifecycle History
+                </h4>
+                
+                <div className="grid grid-cols-2 gap-6">
+                  {/* Movement History */}
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 min-h-[150px]">
+                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-3">Recent Movement</p>
+                    <div className="space-y-3">
+                      {selectedAsset.movementLogs.length > 0 ? selectedAsset.movementLogs.map(log => (
+                        <div key={log.id} className="text-[10px] border-l-2 border-blue-400 pl-2 py-1">
+                          <p className="font-black text-slate-700">{log.fromLocation} → {log.toLocation}</p>
+                          <p className="text-slate-400">{format(log.date, 'dd MMM yy')} • {log.movedBy}</p>
+                        </div>
+                      )) : (
+                        <p className="text-[10px] text-slate-400 italic">No movement history recorded.</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Service History */}
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 min-h-[150px]">
+                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-3">Service & Compliance</p>
+                    <div className="space-y-3">
+                      {selectedAsset.maintenanceLogs.length > 0 ? selectedAsset.maintenanceLogs.map(log => (
+                        <div key={log.id} className="text-[10px] border-l-2 border-emerald-400 pl-2 py-1">
+                          <p className="font-black text-slate-700">{log.type}: {log.notes}</p>
+                          <p className="text-slate-400">{format(log.date, 'dd MMM yy')} • {log.performer}</p>
+                        </div>
+                      )) : (
+                        <p className="text-[10px] text-slate-400 italic">No maintenance logs found.</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -414,128 +457,520 @@ export const AssetManagementView = () => {
       {/* Manual Registration Modal */}
       {showManualReg && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[60] flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white w-full max-w-2xl rounded-[32px] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in duration-300">
-            <div className="p-8 bg-blue-600 text-white flex justify-between items-start">
-              <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <ShieldCheck className="w-8 h-8 text-white" />
-                  <h2 className="text-2xl font-black tracking-tight uppercase">Manual Asset Registry</h2>
+          <div className="bg-white w-full max-w-4xl rounded-[32px] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in duration-300">
+            {/* Header with Stepper */}
+            <div className="p-8 bg-slate-900 text-white">
+              <div className="flex justify-between items-center mb-8">
+                <div>
+                  <div className="flex items-center gap-3 mb-1">
+                    <ShieldCheck className="w-8 h-8 text-blue-400" />
+                    <h2 className="text-2xl font-black tracking-tight uppercase">Asset Registration Wizard</h2>
+                  </div>
+                  <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Step {formStep} of 6 • {
+                    formStep === 1 ? 'Asset Identification' :
+                    formStep === 2 ? 'Procurement & Warranty' :
+                    formStep === 3 ? 'Ownership & Assignment' :
+                    formStep === 4 ? 'Location Details' : 
+                    formStep === 5 ? 'Status & Condition' : 
+                    'Maintenance & Compliance'
+                  }</p>
                 </div>
-                <p className="opacity-80 text-sm font-medium">Capture details for items acquired outside the PR system</p>
+                <button 
+                  onClick={() => { 
+                    setShowManualReg(false); 
+                    setFormStep(1); 
+                    setAssetForm(initialFormState);
+                  }} 
+                  className="p-2 hover:bg-white/10 rounded-full text-slate-400"
+                >
+                  <Plus className="w-6 h-6 rotate-45" />
+                </button>
               </div>
-              <button onClick={() => setShowManualReg(false)} className="p-2 hover:bg-white/10 rounded-full text-white">
-                <Plus className="w-6 h-6 rotate-45" />
-              </button>
-            </div>
 
-            <div className="p-8 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
-              <div className="grid grid-cols-2 gap-6">
-                <div className="col-span-2">
-                  <label className="block text-[9px] font-black text-slate-500 uppercase mb-1">Asset Nomenclature (Name)</label>
-                  <input
-                    type="text"
-                    className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 bg-slate-50"
-                    placeholder="e.g. Clinical Workstation Pro"
-                    value={assetForm.name}
-                    onChange={e => setAssetForm({...assetForm, name: e.target.value})}
+              {/* Stepper Pulse */}
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5, 6].map((s) => (
+                  <div 
+                    key={s} 
+                    className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${
+                      s <= formStep ? 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]' : 'bg-slate-800'
+                    }`}
                   />
-                </div>
-                <div>
-                  <label className="block text-[9px] font-black text-slate-500 uppercase mb-1">Asset Category</label>
-                  <select
-                    className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none bg-slate-50"
-                    value={assetForm.category}
-                    onChange={e => setAssetForm({...assetForm, category: e.target.value as any})}
-                  >
-                    <option>Medical</option>
-                    <option>IT</option>
-                    <option>Furniture</option>
-                    <option>Facility</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[9px] font-black text-slate-500 uppercase mb-1">Serial Number</label>
-                  <input
-                    type="text"
-                    className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none bg-slate-50"
-                    placeholder="SN-XXXX-XXXX"
-                    value={assetForm.serialNo}
-                    onChange={e => setAssetForm({...assetForm, serialNo: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[9px] font-black text-slate-500 uppercase mb-1">Floor Level</label>
-                  <input
-                    type="text"
-                    className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none bg-slate-50"
-                    placeholder="e.g. 1st Floor"
-                    value={assetForm.floor}
-                    onChange={e => setAssetForm({...assetForm, floor: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[9px] font-black text-slate-500 uppercase mb-1">Room / Zone</label>
-                  <input
-                    type="text"
-                    className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none bg-slate-50"
-                    placeholder="e.g. Diagnostic-04"
-                    value={assetForm.room}
-                    onChange={e => setAssetForm({...assetForm, room: e.target.value})}
-                  />
-                </div>
+                ))}
               </div>
             </div>
 
-            <div className="p-8 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
-              <button onClick={() => setShowManualReg(false)} className="px-6 py-3 text-slate-500 text-[10px] font-black uppercase tracking-widest hover:text-slate-800 transition-colors">Cancel</button>
-              <button
-                disabled={!assetForm.name || !assetForm.serialNo}
+            <div className="p-8 space-y-8 max-h-[60vh] overflow-y-auto custom-scrollbar bg-slate-50/30">
+              {/* STEP 1: ASSET IDENTIFICATION */}
+              {formStep === 1 && (
+                <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+                  <div className="grid grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 flex justify-between">
+                        Asset ID <span className="text-blue-500 font-bold">Auto-Generated</span>
+                      </label>
+                      <input 
+                        readOnly
+                        value={assetForm.id}
+                        className="w-full bg-slate-100 border border-slate-200 rounded-xl p-3 text-sm font-mono text-slate-500 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 flex justify-between">
+                        Unique Tag Number <span className="text-blue-500 font-bold">Auto-Generated</span>
+                      </label>
+                      <input 
+                        readOnly
+                        value={assetForm.tagNumber}
+                        className="w-full bg-slate-100 border border-slate-200 rounded-xl p-3 text-sm font-mono text-slate-500 outline-none"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Asset Name *</label>
+                      <input 
+                        autoFocus
+                        value={assetForm.name}
+                        onChange={e => setAssetForm({...assetForm, name: e.target.value})}
+                        placeholder="Enter logical name of the asset..."
+                        className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Brand / Model</label>
+                      <select 
+                        value={assetForm.brandModel}
+                        onChange={e => setAssetForm({...assetForm, brandModel: e.target.value})}
+                        className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500"
+                      >
+                        <option value="">Select Brand</option>
+                        {brands.map(b => (
+                          <option key={b.id} value={b.name}>{b.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Category</label>
+                      <select 
+                        value={assetForm.category}
+                        onChange={e => setAssetForm({...assetForm, category: e.target.value as any})}
+                        className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500"
+                      >
+                        {categories.map(c => (
+                          <option key={c.id} value={c.name}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Serial Number *</label>
+                      <input 
+                        value={assetForm.serialNo}
+                        onChange={e => setAssetForm({...assetForm, serialNo: e.target.value})}
+                        placeholder="SN-XXXX-XXXX"
+                        className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all uppercase"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Manufacturer Ref.</label>
+                      <input 
+                        value={assetForm.manufacturerRef}
+                        onChange={e => setAssetForm({...assetForm, manufacturerRef: e.target.value})}
+                        placeholder="Ref code..."
+                        className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 2: PROCUREMENT & WARRANTY */}
+              {formStep === 2 && (
+                <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+                  <div className="grid grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Purchase Date</label>
+                      <input 
+                        type="date"
+                        value={assetForm.purchaseDate}
+                        onChange={e => setAssetForm({...assetForm, purchaseDate: e.target.value})}
+                        className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Invoice Reference</label>
+                      <input 
+                        value={assetForm.invoiceRef}
+                        onChange={e => setAssetForm({...assetForm, invoiceRef: e.target.value})}
+                        placeholder="INV-XXXX"
+                        className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 font-bold">Document Upload (Invoice/Manual)</label>
+                      <div className="relative">
+                        <input 
+                          value={assetForm.documentUrl}
+                          onChange={e => setAssetForm({...assetForm, documentUrl: e.target.value})}
+                          placeholder="Drop file or paste URL..."
+                          className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold shadow-inner bg-slate-50 outline-none pr-10"
+                        />
+                        <FileText className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Warranty Start Date</label>
+                      <input 
+                        type="date"
+                        value={assetForm.warrantyStart}
+                        onChange={e => setAssetForm({...assetForm, warrantyStart: e.target.value})}
+                        className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Warranty End Date</label>
+                      <input 
+                        type="date"
+                        value={assetForm.warrantyEnd}
+                        onChange={e => setAssetForm({...assetForm, warrantyEnd: e.target.value})}
+                        className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Alert Before Expiry (Days)</label>
+                      <select 
+                        value={assetForm.alertBeforeExpiry}
+                        onChange={e => setAssetForm({...assetForm, alertBeforeExpiry: Number(e.target.value)})}
+                        className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500"
+                      >
+                        <option value={15}>15 Days</option>
+                        <option value={30}>30 Days</option>
+                        <option value={60}>60 Days</option>
+                        <option value={90}>90 Days</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 3: OWNERSHIP & ASSIGNMENT */}
+              {formStep === 3 && (
+                <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+                  <div className="grid grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Asset Center / Branch *</label>
+                      <select 
+                        value={assetForm.branch}
+                        onChange={e => setAssetForm({...assetForm, branch: e.target.value})}
+                        className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500"
+                      >
+                        <option value="">Select Center</option>
+                        {branches.map(b => (
+                          <option key={b.id} value={b.name}>{b.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Asset Owner (Dept / center)</label>
+                      <input 
+                        value={assetForm.assetOwner}
+                        onChange={e => setAssetForm({...assetForm, assetOwner: e.target.value})}
+                        placeholder="Main Admin / Diagnostics..."
+                        className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Department / Section</label>
+                      <select 
+                        value={assetForm.department}
+                        onChange={e => setAssetForm({...assetForm, department: e.target.value})}
+                        className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500"
+                      >
+                        <option value="">Select Department</option>
+                        {departments.map(d => (
+                          <option key={d.id} value={d.name}>{d.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Assigned To</label>
+                      <select 
+                        value={assetForm.assignedTo}
+                        onChange={e => setAssetForm({...assetForm, assignedTo: e.target.value})}
+                        className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500"
+                      >
+                        <option value="">Select User</option>
+                        {users.map(u => (
+                          <option key={u.id} value={u.name}>{u.name} ({u.role})</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Issued Date</label>
+                      <input 
+                        type="date"
+                        value={assetForm.issuedDate}
+                        onChange={e => setAssetForm({...assetForm, issuedDate: e.target.value})}
+                        className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Assigned By</label>
+                      <input 
+                        value={assetForm.issuedBy}
+                        readOnly
+                        className="w-full bg-slate-100 border border-slate-200 rounded-xl p-3 text-sm font-bold text-slate-500 outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 4: LOCATION DETAILS */}
+              {formStep === 4 && (
+                <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+                  <div className="grid grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Floor</label>
+                      <input 
+                        value={assetForm.floor}
+                        onChange={e => setAssetForm({...assetForm, floor: e.target.value})}
+                        placeholder="e.g. Ground / 1st"
+                        className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Building / Wing</label>
+                      <input 
+                        value={assetForm.buildingWing}
+                        onChange={e => setAssetForm({...assetForm, buildingWing: e.target.value})}
+                        placeholder="e.g. Main / East Wing"
+                        className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Room Name / Number</label>
+                      <input 
+                        value={assetForm.room}
+                        onChange={e => setAssetForm({...assetForm, room: e.target.value})}
+                        placeholder="e.g. ICU-402"
+                        className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Exact Location</label>
+                      <input 
+                        value={assetForm.exactLocation}
+                        onChange={e => setAssetForm({...assetForm, exactLocation: e.target.value})}
+                        placeholder="e.g. Near window"
+                        className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Rack / Corner (Optional)</label>
+                      <input 
+                        value={assetForm.rackCorner}
+                        onChange={e => setAssetForm({...assetForm, rackCorner: e.target.value})}
+                        placeholder="e.g. Shelf B"
+                        className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 5: STATUS & CONDITION */}
+              {formStep === 5 && (
+                <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+                  <div className="grid grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Initial Status</label>
+                      <select 
+                        value={assetForm.status}
+                        onChange={e => setAssetForm({...assetForm, status: e.target.value as any})}
+                        className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500"
+                      >
+                        <option value="Active">Active</option>
+                        <option value="Under Maintenance">Under Maintenance</option>
+                        <option value="Down">Down</option>
+                        <option value="Disposed">Disposed</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Equipment Condition</label>
+                      <select 
+                        value={assetForm.condition}
+                        onChange={e => setAssetForm({...assetForm, condition: e.target.value as any})}
+                        className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500"
+                      >
+                        <option value="Good">Good (Full working order)</option>
+                        <option value="Fair">Fair (Operational but aging)</option>
+                        <option value="Poor">Poor (Major repair needed)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 6: MAINTENANCE & COMPLIANCE */}
+              {formStep === 6 && (
+                <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="col-span-2">
+                       <label className="flex items-center gap-2 cursor-pointer group">
+                          <input 
+                            type="checkbox"
+                            checked={assetForm.dhaAuditFocus}
+                            onChange={e => setAssetForm({...assetForm, dhaAuditFocus: e.target.checked})}
+                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-sm font-black text-slate-700 uppercase tracking-tight group-hover:text-blue-600 transition-colors">DHA Audit Focus Item</span>
+                       </label>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">PPM Schedule</label>
+                      <select 
+                        value={assetForm.ppmSchedule}
+                        onChange={e => setAssetForm({...assetForm, ppmSchedule: e.target.value as any})}
+                        className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none bg-white"
+                      >
+                        <option value="Monthly">Monthly</option>
+                        <option value="Quarterly">Quarterly</option>
+                        <option value="Bi-Annual">Bi-Annual</option>
+                        <option value="Annual">Annual</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Last Service Date</label>
+                      <input 
+                        type="date"
+                        value={assetForm.lastServiceDate || ''}
+                        onChange={e => setAssetForm({...assetForm, lastServiceDate: e.target.value})}
+                        className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Next PPM Due (Override)</label>
+                      <input 
+                        type="date"
+                        value={assetForm.nextServiceDue}
+                        onChange={e => setAssetForm({...assetForm, nextServiceDue: e.target.value})}
+                        className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none"
+                      />
+                    </div>
+
+                    <div className="col-span-2">
+                       <label className="flex items-center gap-2 cursor-pointer group">
+                          <input 
+                            type="checkbox"
+                            checked={assetForm.isCalibrationRequired}
+                            onChange={e => setAssetForm({...assetForm, isCalibrationRequired: e.target.checked})}
+                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-sm font-black text-slate-700 uppercase tracking-tight group-hover:text-blue-600 transition-colors">Calibration Required</span>
+                       </label>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">AMC / Vendor</label>
+                      <input 
+                        value={assetForm.amcVendor}
+                        onChange={e => setAssetForm({...assetForm, amcVendor: e.target.value})}
+                        placeholder="AMC Provider..."
+                        className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Service Provider</label>
+                      <input 
+                        value={assetForm.serviceProvider}
+                        onChange={e => setAssetForm({...assetForm, serviceProvider: e.target.value})}
+                        placeholder="Contact Person..."
+                        className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer Navigation */}
+            <div className="p-8 border-t border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <button 
                 onClick={() => {
-                  const newAsset: Asset = {
-                    id: `AST-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
-                    name: assetForm.name,
-                    category: assetForm.category,
-                    serialNo: assetForm.serialNo,
-                    brandModel: assetForm.brandModel || 'Manual Entry',
-                    prId: 'MANUAL',
-                    purchaseDate: Date.now(),
-                    price: 0,
-                    vendor: 'Direct Entry',
-                    warrantyStart: new Date().toISOString().split('T')[0],
-                    warrantyEnd: new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0],
-                    ppmSchedule: assetForm.ppmSchedule,
-                    nextServiceDue: Date.now() + 90 * 86400000,
-                    isCalibrationRequired: assetForm.isCalibrationRequired,
-                    department: 'General',
-                    branch: branch,
-                    assignedTo: assetForm.assignedTo || 'Facility Support',
-                    issuedDate: Date.now(),
-                    floor: assetForm.floor,
-                    room: assetForm.room,
-                    status: 'Active',
-                    condition: 'Good',
-                    movementHistory: [],
-                    breakdownHistory: []
-                  };
-                  registerAsset(newAsset);
                   setShowManualReg(false);
-                  setAssetForm({
-                    name: '',
-                    category: 'Medical',
-                    serialNo: '',
-                    brandModel: '',
-                    floor: '',
-                    room: '',
-                    assignedTo: '',
-                    ppmSchedule: 'Quarterly',
-                    isCalibrationRequired: false
-                  });
-                  alert('Asset Manually Registered Successfully');
+                  setFormStep(1);
+                  setAssetForm(initialFormState);
                 }}
-                className="px-8 py-3 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 text-[10px] font-black uppercase tracking-widest shadow-xl shadow-blue-200 transition-all disabled:opacity-50"
+                className="text-slate-400 text-[10px] font-black uppercase tracking-widest hover:text-slate-600 transition-colors"
               >
-                Confirm Registration
+                Cancel Entry
               </button>
+              
+              <div className="flex gap-3">
+                {formStep > 1 && (
+                  <button 
+                    onClick={() => setFormStep(formStep - 1)}
+                    className="px-6 py-3 border border-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white transition-all"
+                  >
+                    Back
+                  </button>
+                )}
+                
+                {formStep < 6 ? (
+                  <button 
+                    onClick={() => {
+                      setFormStep(formStep + 1);
+                    }}
+                    className="px-8 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:shadow-xl shadow-slate-200 transition-all disabled:opacity-50"
+                  >
+                    Next Step
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => {
+                      const newAsset: Asset = {
+                        ...assetForm,
+                        id: assetForm.id,
+                        tagNumber: assetForm.tagNumber,
+                        purchaseDate: assetForm.purchaseDate ? new Date(assetForm.purchaseDate).getTime() : Date.now(),
+                        issuedDate: assetForm.issuedDate ? new Date(assetForm.issuedDate).getTime() : Date.now(),
+                        warrantyStart: assetForm.warrantyStart,
+                        warrantyEnd: assetForm.warrantyEnd,
+                        lastServiceDate: assetForm.lastServiceDate ? new Date(assetForm.lastServiceDate).getTime() : undefined,
+                        nextServiceDue: assetForm.nextServiceDue ? new Date(assetForm.nextServiceDue).getTime() : Date.now() + 90 * 86400000,
+                        maintenanceLogs: assetForm.lastServiceDate ? [{
+                          id: `LOG-${Date.now()}`,
+                          date: new Date(assetForm.lastServiceDate).getTime(),
+                          type: 'PPM',
+                          performer: assetForm.serviceProvider || 'System',
+                          notes: 'Initial recorded service at registration',
+                          status: 'Pass'
+                        }] : [],
+                        movementLogs: [{
+                          id: `MOV-${Date.now()}`,
+                          date: Date.now(),
+                          fromLocation: 'Registry',
+                          toLocation: `${assetForm.branch || branch} - ${assetForm.room || 'Storage'}`,
+                          movedBy: role,
+                          reason: 'Initial Asset Assignment'
+                        }],
+                        branch: assetForm.branch || branch // Fallback to current branch
+                      } as any;
+                      registerAsset(newAsset);
+                      setShowManualReg(false);
+                      setFormStep(1);
+                      setAssetForm(initialFormState);
+                      alert('Asset Registered Successfully');
+                    }}
+                    className="px-10 py-3 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 shadow-xl shadow-blue-200 transition-all"
+                  >
+                    Complete Registration
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
