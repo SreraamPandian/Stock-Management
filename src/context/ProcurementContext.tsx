@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { PurchaseRequest, Role, PRStatus, Tab, PRHistory, Priority } from '../types';
+import { PurchaseRequest, Role, PRStatus, Tab, PRHistory, Priority, Asset } from '../types';
+
 
 interface ProcurementContextType {
   role: Role;
@@ -13,7 +14,13 @@ interface ProcurementContextType {
   updatePRStatus: (id: string, newStatus: PRStatus, notes?: string, extraData?: Partial<PurchaseRequest>) => void;
   extendTAT: (id: string, additionalHours: number, reason: string, revisedDate?: number) => void;
   getDeptBudget: (dept: string) => { approved: number, consumed: number };
+  assets: Asset[];
+  registerAsset: (asset: Asset) => void;
+  updateAssetStatus: (id: string, status: Asset['status'], condition: Asset['condition']) => void;
+  logMaintenance: (id: string, notes: string) => void;
+  transferAsset: (id: string, floor: string, room: string) => void;
 }
+
 
 const now = Date.now();
 const hour = 3600000;
@@ -233,6 +240,28 @@ const deptBudgets: Record<string, { approved: number, consumed: number }> = {
   'ENT': { approved: 80000, consumed: 40000 }
 };
 
+const initialAssets: Asset[] = [
+  {
+    id: 'AST-2025-001', name: 'Ventilator V1', category: 'Medical', serialNo: 'SN-99283-X', brandModel: 'MedTech Pro 500',
+    prId: 'PR-2025-005', purchaseDate: now - (30 * day), price: 45000, vendor: 'MedSupply Co.',
+    warrantyStart: '2025-01-01', warrantyEnd: '2026-01-01', ppmSchedule: 'Quarterly',
+    nextServiceDue: now + (15 * day), isCalibrationRequired: true, nextCalibrationDue: now + (45 * day),
+    department: 'ICU', branch: 'Bur Dubai', assignedTo: 'Dr. Hassan', issuedDate: now - (25 * day),
+    floor: 'Floor 2', room: 'ICU-Room 4', status: 'Active', condition: 'Good',
+    movementHistory: [], breakdownHistory: []
+  },
+  {
+    id: 'AST-2025-002', name: 'Standard Dell Laptop', category: 'IT', serialNo: 'LT-7738-B', brandModel: 'Dell Latitude 5420',
+    prId: 'PR-2025-010', purchaseDate: now - (10 * day), price: 5200, vendor: 'IT Systems Dubai',
+    warrantyStart: '2025-02-15', warrantyEnd: '2028-02-15', ppmSchedule: 'Annual',
+    nextServiceDue: now + (200 * day), isCalibrationRequired: false,
+    department: 'Administration', branch: 'Al Quoz', assignedTo: 'Sarah Ali', issuedDate: now - (8 * day),
+    floor: 'Floor 1', room: 'Admin Office', status: 'Active', condition: 'Good',
+    movementHistory: [], breakdownHistory: []
+  }
+];
+
+
 const ProcurementContext = createContext<ProcurementContextType | undefined>(undefined);
 
 export const ProcurementProvider = ({ children }: { children: ReactNode }) => {
@@ -257,6 +286,15 @@ export const ProcurementProvider = ({ children }: { children: ReactNode }) => {
     return initialState;
   });
 
+  const [assets, setAssets] = useState<Asset[]>(() => {
+    try {
+      const saved = localStorage.getItem('procurement_assets');
+      if (saved) return JSON.parse(saved);
+    } catch { }
+    return initialAssets;
+  });
+
+
   useEffect(() => {
     localStorage.setItem('procurement_prs', JSON.stringify(prs));
   }, [prs]);
@@ -268,6 +306,11 @@ export const ProcurementProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     localStorage.setItem('procurement_branch', branch);
   }, [branch]);
+
+  useEffect(() => {
+    localStorage.setItem('procurement_assets', JSON.stringify(assets));
+  }, [assets]);
+
 
   useEffect(() => {
     const checkEscalations = () => {
@@ -433,8 +476,60 @@ export const ProcurementProvider = ({ children }: { children: ReactNode }) => {
     }));
   };
 
+  const registerAsset = (asset: Asset) => {
+    setAssets(current => [asset, ...current]);
+  };
+  
+  const updateAssetStatus = (id: string, status: Asset['status'], condition: Asset['condition']) => {
+    setAssets(current => current.map(a => a.id === id ? { ...a, status, condition } : a));
+  };
+
+  const logMaintenance = (id: string, notes: string) => {
+    setAssets(current => current.map(a => {
+      if (a.id === id) {
+        const intervalMap = { 'Monthly': 30, 'Quarterly': 90, 'Bi-Annual': 180, 'Annual': 365 };
+        const days = intervalMap[a.ppmSchedule] || 90;
+        return {
+          ...a,
+          nextServiceDue: Date.now() + (days * 24 * 3600000),
+          lastServiceDate: Date.now(),
+          breakdownHistory: [...a.breakdownHistory, {
+            date: Date.now(),
+            issue: `Scheduled Maintenance: ${notes}`,
+            resolvedDate: Date.now(),
+            cost: 0
+          }]
+        };
+      }
+      return a;
+    }));
+  };
+
+  const transferAsset = (id: string, floor: string, room: string) => {
+    setAssets(current => current.map(a => {
+      if (a.id === id) {
+        return {
+          ...a,
+          floor,
+          room,
+          movementHistory: [...a.movementHistory, {
+            date: Date.now(),
+            from: `${a.floor} - ${a.room}`,
+            to: `${floor} - ${room}`,
+            movedBy: role
+          }]
+        };
+      }
+      return a;
+    }));
+  };
+
   return (
-    <ProcurementContext.Provider value={{ role, setRole, branch, setBranch, activeTab, setActiveTab, prs, addPR, updatePRStatus, extendTAT, getDeptBudget }}>
+    <ProcurementContext.Provider value={{ 
+      role, setRole, branch, setBranch, activeTab, setActiveTab, prs, addPR, updatePRStatus, extendTAT, getDeptBudget, 
+      assets, registerAsset, updateAssetStatus, logMaintenance, transferAsset 
+    }}>
+
       {children}
     </ProcurementContext.Provider>
   );

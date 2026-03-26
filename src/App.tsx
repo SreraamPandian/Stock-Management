@@ -11,6 +11,8 @@ import { UserManagementView } from './components/views/UserManagementView';
 import { LoginPage } from './components/auth/LoginPage';
 import { ApprovalQueueView } from './components/views/ApprovalQueueView';
 import { PurchaseOrderView } from './components/views/PurchaseOrderView';
+import { AssetManagementView } from './components/views/AssetManagementView';
+
 
 const AppContent = () => {
   const { activeTab, setActiveTab, role } = useProcurement();
@@ -97,7 +99,10 @@ const AppContent = () => {
         return <UserManagementView />;
       case 'Purchase Order':
         return <PurchaseOrderView />;
+      case 'Asset Management':
+        return <AssetManagementView />;
       default:
+
         return <Dashboard />;
     }
   };

@@ -16,8 +16,10 @@ export const NewPRForm = ({ onClose }: { onClose: () => void }) => {
     priority: 'Normal' as Priority,
     requester: 'Current User',
     receivedAt: new Date().toISOString().slice(0, 16), // datetime-local format
-    stockAvailable: false
+    stockAvailable: false,
+    isAsset: false
   });
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,13 +119,21 @@ export const NewPRForm = ({ onClose }: { onClose: () => void }) => {
             <select
               className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
               value={formData.category}
-              onChange={e => setFormData({ ...formData, category: e.target.value })}
+              onChange={e => {
+                const cat = e.target.value;
+                setFormData({ 
+                  ...formData, 
+                  category: cat,
+                  isAsset: cat === 'Equipment' || cat === 'Surgical Instruments'
+                });
+              }}
             >
               <option>Consumables</option>
               <option>Surgical Instruments</option>
               <option>Medications</option>
               <option>Equipment</option>
             </select>
+
           </div>
         </div>
 
@@ -179,7 +189,7 @@ export const NewPRForm = ({ onClose }: { onClose: () => void }) => {
           </div>
         </div>
 
-        <div className="bg-amber-50 p-4 rounded-xl border border-amber-200">
+        <div className="bg-amber-50 p-4 rounded-xl border border-amber-200 space-y-3">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-bold text-amber-800">Local Stock Verification</p>
@@ -195,7 +205,24 @@ export const NewPRForm = ({ onClose }: { onClose: () => void }) => {
               />
             </label>
           </div>
+          
+          <div className="pt-3 border-t border-amber-200/50 flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-black text-amber-900 uppercase tracking-widest leading-none">Asset Classification</p>
+              <p className="text-[9px] text-amber-700 mt-1 uppercase">Track as high-value medical/IT asset upon receipt</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input 
+                type="checkbox" 
+                className="sr-only peer" 
+                checked={formData.isAsset}
+                onChange={e => setFormData({ ...formData, isAsset: e.target.checked })}
+              />
+              <div className="w-9 h-5 bg-amber-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
         </div>
+
 
         <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
           {onClose && <button type="button" onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm font-medium transition-colors">Cancel</button>}

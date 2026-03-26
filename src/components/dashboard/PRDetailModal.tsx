@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
-import { PurchaseRequest, PRStatus, Priority } from '../../types';
+import { PurchaseRequest, PRStatus, Priority, Asset, AssetCategory } from '../../types';
+
 import { useProcurement } from '../../context/ProcurementContext';
 import { TimelineStepper } from '../shared/TimelineStepper';
 import { SLATimer } from '../shared/SLATimer';
-import { X, FileText, Check, Ban, Clock, Truck, Barcode, MapPin, Paperclip, AlertTriangle, Lock, TrendingUp } from 'lucide-react';
+import { 
+  X, Check, Lock, MapPin, FileText, TrendingUp, AlertTriangle, Clock, Paperclip, ShieldCheck, Ban, Barcode, Truck 
+} from 'lucide-react';
 import { BarcodeScanner } from '../forms/BarcodeScanner';
 
 interface Props {
@@ -12,12 +15,27 @@ interface Props {
 }
 
 export const PRDetailModal = ({ pr, onClose }: Props) => {
-  const { role, updatePRStatus, extendTAT } = useProcurement();
+  const { role, updatePRStatus, extendTAT, registerAsset, branch: userBranch } = useProcurement();
+
   const [remarks, setRemarks] = useState('');
   const [showRejectReason, setShowRejectReason] = useState(false);
   const [showExtendTAT, setShowExtendTAT] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState<number | null>(null);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+  const [showAssetReg, setShowAssetReg] = useState(false);
+
+  const [assetForm, setAssetForm] = useState({
+    serialNo: '',
+    brandModel: '',
+    floor: '',
+    room: '',
+    exactLocation: '',
+    ppmSchedule: 'Quarterly' as const,
+    isCalibrationRequired: false,
+    assignedTo: '',
+    department: pr.department
+  });
+
 
   // Finance/GRN Specialized Form State
   const [extraFormData, setExtraFormData] = useState({
@@ -214,7 +232,11 @@ export const PRDetailModal = ({ pr, onClose }: Props) => {
                 expiryDate: expiry,
                 notes: `GRN Finalized: ${extraFormData.receivedQty}/${pr.quantity} items receipted. Expiry: ${expiry || 'N/A'}. Discrepancy: ${remarks || 'None'}. Forwarded for workflow closure.`
               });
+              if (pr.isAsset) {
+                setShowAssetReg(true);
+              }
             }} />
+
           </div>
         </div>
       );
@@ -727,6 +749,176 @@ export const PRDetailModal = ({ pr, onClose }: Props) => {
     }
   };
 
+  if (showAssetReg) {
+    return (
+      <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[60] flex items-center justify-center p-4 overflow-y-auto">
+        <div className="bg-white w-full max-w-2xl rounded-[32px] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in duration-300">
+          <div className="p-8 bg-blue-600 text-white flex justify-between items-start">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <ShieldCheck className="w-8 h-8 text-white" />
+                <h2 className="text-2xl font-black tracking-tight uppercase">Asset Registration</h2>
+              </div>
+              <p className="opacity-80 text-sm font-medium">Capture mandatory technical details for {pr.itemName}</p>
+            </div>
+          </div>
+
+          <div className="p-8 space-y-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
+            <div className="grid grid-cols-2 gap-6">
+              {/* Identity */}
+              <div className="space-y-4">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Technical Specifications</h4>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-[9px] font-black text-slate-500 uppercase mb-1">Serial Number / Manufacturer Ref</label>
+                    <input
+                      type="text"
+                      className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500"
+                      placeholder="e.g. SN-992-811"
+                      value={assetForm.serialNo}
+                      onChange={e => setAssetForm({...assetForm, serialNo: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-black text-slate-500 uppercase mb-1">Brand & Model</label>
+                    <input
+                      type="text"
+                      className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500"
+                      placeholder="e.g. GE Healthcare / V-Scan"
+                      value={assetForm.brandModel}
+                      onChange={e => setAssetForm({...assetForm, brandModel: e.target.value})}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Maintenance */}
+              <div className="space-y-4">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Compliance & PPM</h4>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-[9px] font-black text-slate-500 uppercase mb-1">PPM Frequency</label>
+                    <select
+                      className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none bg-slate-50"
+                      value={assetForm.ppmSchedule}
+                      onChange={e => setAssetForm({...assetForm, ppmSchedule: e.target.value as any})}
+                    >
+                      <option>Monthly</option>
+                      <option>Quarterly</option>
+                      <option>Bi-Annual</option>
+                      <option>Annual</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
+                    <input
+                      type="checkbox"
+                      id="calib"
+                      checked={assetForm.isCalibrationRequired}
+                      onChange={e => setAssetForm({...assetForm, isCalibrationRequired: e.target.checked})}
+                      className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-blue-200"
+                    />
+                    <label htmlFor="calib" className="text-xs font-black text-blue-700 uppercase tracking-tight">Calibration Required (DHA)</label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Location */}
+              <div className="space-y-4">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Facility Location</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[9px] font-black text-slate-500 uppercase mb-1">Floor</label>
+                    <input
+                      type="text"
+                      className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none"
+                      placeholder="e.g. 1st Floor"
+                      value={assetForm.floor}
+                      onChange={e => setAssetForm({...assetForm, floor: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-black text-slate-500 uppercase mb-1">Room</label>
+                    <input
+                      type="text"
+                      className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none"
+                      placeholder="e.g. ICU-04"
+                      value={assetForm.room}
+                      onChange={e => setAssetForm({...assetForm, room: e.target.value})}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Ownership */}
+              <div className="space-y-4">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ownership & Assignment</h4>
+                <div>
+                  <label className="block text-[9px] font-black text-slate-500 uppercase mb-1">Assigned To (Employee Name)</label>
+                  <input
+                    type="text"
+                    className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none"
+                    placeholder="e.g. Dr. Sarah Jenkins"
+                    value={assetForm.assignedTo}
+                    onChange={e => setAssetForm({...assetForm, assignedTo: e.target.value})}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-8 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
+            <button
+              onClick={() => { setShowAssetReg(false); onClose(); }}
+              className="px-6 py-3 text-slate-500 hover:text-slate-700 text-[10px] font-black uppercase tracking-widest"
+            >
+              Skip & Close
+            </button>
+            <button
+              disabled={!assetForm.serialNo}
+              onClick={() => {
+                const newAsset: Asset = {
+                  id: `AST-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+                  name: pr.itemName || 'Asset Item',
+                  category: (pr.category as AssetCategory) || 'Medical',
+
+                  serialNo: assetForm.serialNo,
+                  brandModel: assetForm.brandModel,
+                  prId: pr.id,
+                  purchaseDate: Date.now(),
+                  price: 0,
+                  vendor: 'System Vendor',
+                  warrantyStart: new Date().toISOString().split('T')[0],
+                  warrantyEnd: new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0],
+                  ppmSchedule: assetForm.ppmSchedule,
+                  nextServiceDue: Date.now() + 90 * 86400000,
+                  isCalibrationRequired: assetForm.isCalibrationRequired,
+                  department: pr.department,
+                  branch: userBranch,
+                  assignedTo: assetForm.assignedTo,
+                  issuedDate: Date.now(),
+                  floor: assetForm.floor,
+                  room: assetForm.room,
+                  status: 'Active',
+                  condition: 'Good',
+                  movementHistory: [],
+                  breakdownHistory: []
+                };
+                registerAsset(newAsset);
+                updatePRStatus(pr.id, 'Asset Registered', 'Asset successfully tagged and registered in Asset Management module.');
+                setShowAssetReg(false);
+                onClose();
+              }}
+              className="px-8 py-3 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 text-[10px] font-black uppercase tracking-widest shadow-xl shadow-blue-200 transition-all disabled:opacity-50"
+            >
+              Complete Registration
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+
   // Success overlay screen
   if (successState) {
     return (
@@ -740,10 +932,6 @@ export const PRDetailModal = ({ pr, onClose }: Props) => {
           <div className="bg-blue-50 border border-blue-100 rounded-2xl px-6 py-4 mb-8 w-full">
             <p className="text-sm font-black text-blue-700 uppercase tracking-tight">{successState.destination}</p>
           </div>
-          <div className="w-full bg-slate-100 rounded-full h-1 overflow-hidden">
-            <div className="h-full bg-emerald-500 animate-[shrink_2.5s_linear_forwards]" style={{ width: '100%', animation: 'progress-shrink 2.5s linear forwards' }} />
-          </div>
-          <p className="text-[9px] font-bold text-slate-300 uppercase mt-3">Closing automatically…</p>
         </div>
       </div>
     );
@@ -842,25 +1030,15 @@ export const PRDetailModal = ({ pr, onClose }: Props) => {
                 {pr.history.map((h, i) => (
                   <div key={h.id} className="flex gap-4 text-sm relative">
                     {i !== pr.history.length - 1 && <div className="absolute left-[11px] top-7 bottom-[-24px] w-[1px] bg-slate-100"></div>}
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 z-10 shadow-sm ${h.action.includes('Rejected') ? 'bg-rose-500 text-white' : h.action === 'Re-submitted' ? 'bg-amber-500 text-white' : 'bg-emerald-500 text-white'
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 z-10 shadow-sm ${h.action.includes('Rejected') ? 'bg-rose-500 text-white' : 'bg-emerald-500 text-white'
                       }`}>
                       {h.action.includes('Rejected') ? <Ban className="w-3 h-3" /> : <Check className="w-3 h-3" />}
                     </div>
                     <div className="flex-1 pb-4">
                       <div className="flex justify-between items-start">
                         <p className="font-black text-slate-800 text-xs uppercase tracking-tight">{h.stage} • {h.action}</p>
-                        <span className="text-[9px] font-bold text-slate-300 uppercase">{new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                       </div>
-                      <p className="text-[10px] text-slate-400 font-bold mt-0.5 uppercase tracking-tighter">{h.userRole} at {new Date(h.timestamp).toLocaleDateString()}</p>
-                      {h.rejectionReason && (
-                        <p className="text-[10px] font-black text-rose-600 mt-2 bg-rose-50 p-2 rounded-lg border border-rose-100 uppercase tracking-tight italic">
-                          Reason: {h.rejectionReason}
-                        </p>
-                      )}
-                      {(h.userRole === 'SMD' && pr.delayReason) && (
-                        <p className="text-[9px] font-black text-rose-500 mt-1 uppercase">Governance Delay Justification: {pr.delayReason}</p>
-                      )}
-                      {h.notes && <p className="text-xs text-slate-500 mt-2 bg-slate-50 p-3 rounded-lg border border-slate-100 leading-relaxed">{h.notes}</p>}
+                      {h.notes && <p className="text-xs text-slate-500 mt-2 bg-slate-50 p-3 rounded-lg border border-slate-100">{h.notes}</p>}
                     </div>
                   </div>
                 ))}
@@ -869,7 +1047,7 @@ export const PRDetailModal = ({ pr, onClose }: Props) => {
           </div>
         </div>
 
-        {pr.status !== 'Closed - Completed' && (
+        {pr.status !== 'Closed - Completed' && pr.status !== 'Asset Registered' && (
           <div className="p-8 border-t border-slate-100 bg-slate-50/80 flex justify-end gap-3">
             {showRejectReason ? (
               <div className="w-full space-y-4 animate-in slide-in-from-right duration-300">
@@ -877,7 +1055,7 @@ export const PRDetailModal = ({ pr, onClose }: Props) => {
                   <div>
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Rejection Category</label>
                     <select
-                      className="w-full border border-rose-200 rounded-xl p-3 text-sm outline-none focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500 transition-all cursor-pointer bg-white font-bold text-rose-700"
+                      className="w-full border border-rose-200 rounded-xl p-3 text-sm outline-none bg-white font-bold text-rose-700"
                       value={selectedReason}
                       onChange={e => setSelectedReason(e.target.value)}
                     >
@@ -889,7 +1067,7 @@ export const PRDetailModal = ({ pr, onClose }: Props) => {
                     <input
                       type="text"
                       placeholder="Provide specific internal notes..."
-                      className="w-full border border-rose-200 rounded-xl p-3 text-sm outline-none focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500 transition-all bg-white"
+                      className="w-full border border-rose-200 rounded-xl p-3 text-sm outline-none bg-white"
                       value={remarks}
                       onChange={e => setRemarks(e.target.value)}
                       autoFocus

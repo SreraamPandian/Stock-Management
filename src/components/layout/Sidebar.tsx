@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { LayoutDashboard, FileText, Package, BarChart2, Building2, Settings, ChevronDown, Store, Users, ShoppingCart } from 'lucide-react';
+import { LayoutDashboard, FileText, Package, BarChart2, Building2, Settings, ChevronDown, Store, Users, ShoppingCart, ShieldCheck } from 'lucide-react';
+
 import { useProcurement } from '../../context/ProcurementContext';
 import { Tab } from '../../types';
 
@@ -18,7 +19,9 @@ export const Sidebar = () => {
     { icon: FileText, label: 'PR Entry' },
     { icon: Package, label: 'Stock' },
     { icon: BarChart2, label: 'Analytics' },
+    { icon: ShieldCheck, label: 'Asset Management' },
   ];
+
 
   const masterItems: { icon: any; label: Tab }[] = [
     { icon: Store, label: 'Store Management' },

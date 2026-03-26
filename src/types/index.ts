@@ -24,9 +24,16 @@ export type PRStatus =
   | 'GRN Completed'
   | 'Delivered'
   | 'Closed - Completed'
-  | 'Rejected - Action Required';
+  | 'Rejected - Action Required'
+  | 'Asset Registered';
 
-export type Tab = 'Dashboard' | 'PR Entry' | 'Stock' | 'Analytics' | 'Admin' | 'Store Management' | 'User Management' | 'Purchase Order';
+export type AssetCategory = 'Medical' | 'IT' | 'Furniture' | 'Vehicles' | 'Facility';
+export type AssetStatus = 'Active' | 'Under Maintenance' | 'Down' | 'Disposed';
+export type AssetCondition = 'Good' | 'Fair' | 'Poor';
+
+
+export type Tab = 'Dashboard' | 'PR Entry' | 'Stock' | 'Analytics' | 'Admin' | 'Store Management' | 'User Management' | 'Purchase Order' | 'Asset Management';
+
 
 
 export interface Store {
@@ -109,4 +116,55 @@ export interface PurchaseRequest {
   receivedQuantity?: number;
   discrepancyRemarks?: string;
   isAuditLocked?: boolean;
+  isAsset?: boolean;
 }
+
+export interface Asset {
+  id: string; // Asset ID / Tag
+  name: string;
+  category: AssetCategory;
+  serialNo: string;
+  brandModel: string;
+  
+  // Procurement Link
+  prId: string;
+  purchaseDate: number;
+  price: number;
+  vendor: string;
+  
+  // Warranty & Compliance
+  warrantyStart: string;
+  warrantyEnd: string;
+  ppmSchedule: 'Monthly' | 'Quarterly' | 'Bi-Annual' | 'Annual';
+  lastServiceDate?: number;
+  nextServiceDue: number;
+  isCalibrationRequired: boolean;
+  lastCalibrationDate?: number;
+  nextCalibrationDue?: number;
+  
+  // Ownership & Assignment
+  department: string;
+  branch: string;
+  assignedTo: string;
+  issuedDate: number;
+  returnDate?: number;
+  
+  // Location
+  floor: string;
+  room: string;
+  exactLocation?: string;
+  
+  // Status
+  status: AssetStatus;
+  condition: AssetCondition;
+  
+  // Documents
+  manualUrl?: string;
+  warrantyUrl?: string;
+  calibrationCertUrl?: string;
+  
+  // History is handled separately or as a sub-array
+  movementHistory: { date: number, from: string, to: string, movedBy: string }[];
+  breakdownHistory: { date: number, issue: string, resolvedDate?: number, cost?: number }[];
+}
+
